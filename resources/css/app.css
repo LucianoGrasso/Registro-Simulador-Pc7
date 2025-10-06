@@ -1,0 +1,258 @@
+@import 'bootstrap';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* ===== ESTILOS BASE ===== */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ===== CARDS ===== */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+
+
+/* ===== SCANNER ===== */
+.scanner-container {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.btn-scanner {
+    min-width: 150px;
+    font-weight: 600;
+}
+
+#qr-reader {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* ===== SESIONES ===== */
+.sesion-activa {
+    background-color: #fff3cd !important;
+    border-left: 4px solid #ffc107;
+}
+
+.sesion-finalizada {
+    background-color: #ffebeb !important; /* Cambiado de azul a rojo claro */
+    border-left: 4px solid #FE0000; /* Cambiado de azul a rojo */
+}
+
+/* ===== ESTADÍSTICAS ===== */
+.stats-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+}
+
+.stats-icon {
+    opacity: 0.8;
+}
+
+/* ===== CALENDARIO ===== */
+.calendario-mes td {
+    padding: 8px;
+    height: 80px;
+    vertical-align: top;
+    border: 1px solid #dee2e6;
+}
+
+.calendario-dia {
+    position: relative;
+    cursor: pointer;
+}
+
+.calendario-dia:hover {
+    background-color: #e9ecef;
+}
+
+.calendario-vacio {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+/* ===== FORMULARIOS ===== */
+.form-control:focus {
+    border-color: #fe6666; /* Cambiado de azul a rojo claro */
+    box-shadow: 0 0 0 0.25rem rgba(254, 0, 0, 0.25); /* Cambiado de azul a rojo */
+}
+
+.form-floating > .form-control:focus ~ label {
+    color: #FE0000; /* Cambiado de azul a rojo */
+}
+
+/* ===== BOTONES PERSONALIZADOS ===== */
+.btn-outline-scanner {
+    color: #FE0000; /* Cambiado de azul a rojo */
+    border-color: #FE0000; /* Cambiado de azul a rojo */
+}
+
+.btn-outline-scanner:hover {
+    color: #fff;
+    background-color: #FE0000; /* Cambiado de azul a rojo */
+    border-color: #FE0000; /* Cambiado de azul a rojo */
+}
+
+/* ===== BADGES ===== */
+.badge-npi {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+/* ===== ALERTAS ===== */
+.alert-session {
+    border-left: 4px solid #28a745;
+}
+
+.alert-scanner {
+    border: 2px dashed #ffc107;
+    background-color: #fff8e1;
+}
+
+/* ===== TABLA RESPONSIVE ===== */
+.table-hover tbody tr:hover {
+    background-color: rgba(254, 0, 0, 0.075); /* Cambiado de azul a rojo */
+}
+
+/* ===== LOADING SPINNER ===== */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ===== CLASES ADICIONALES PARA ROJO PERSONALIZADO ===== */
+.btn-primary-custom {
+    background-color: #FE0000;
+    border-color: #FE0000;
+    color: white;
+}
+
+.btn-primary-custom:hover {
+    background-color: #e60000;
+    border-color: #cc0000;
+    color: white;
+}
+
+.btn-outline-primary-custom {
+    color: #FE0000;
+    border-color: #FE0000;
+    background-color: transparent;
+}
+
+.btn-outline-primary-custom:hover {
+    background-color: #FE0000;
+    border-color: #FE0000;
+    color: white;
+}
+
+.text-primary-custom {
+    color: #FE0000 !important;
+}
+
+.bg-primary-custom {
+    background-color: #FE0000 !important;
+}
+
+.border-primary-custom {
+    border-color: #FE0000 !important;
+}
+
+.alert-primary-custom {
+    background-color: #ffebeb;
+    border-color: #FE0000;
+    color: #cc0000;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .stats-card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .scanner-container {
+        padding: 0 15px;
+    }
+}
+
+/* ===== DARK MODE SUPPORT (opcional) ===== */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #212529;
+        color: #fff;
+    }
+    
+    .card {
+        background-color: #343a40;
+        border-color: #495057;
+    }
+    
+    .table {
+        color: #fff;
+    }
+    
+    .calendario-dia:hover {
+        background-color: #495057;
+    }
+}
+
+/* Fix para inputs - texto visible */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+textarea, 
+select {
+    color: #374151 !important; /* Gris oscuro */
+    background-color: #ffffff !important; /* Fondo blanco */
+}
+
+input[type="text"]:focus, 
+input[type="email"]:focus, 
+input[type="password"]:focus, 
+textarea:focus, 
+select:focus {
+    color: #111827 !important; /* Más oscuro al hacer focus */
+    background-color: #ffffff !important;
+}
+
+/* Para inputs con clases específicas de Tailwind - SOLO para inputs */
+input.text-lg, 
+textarea.text-lg, 
+select.text-lg {
+    color: #374151 !important;
+}
+
+input.font-mono, 
+textarea.font-mono, 
+select.font-mono {
+    color: #1f2937 !important;
+}
