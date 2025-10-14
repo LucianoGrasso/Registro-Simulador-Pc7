@@ -27,9 +27,6 @@ class SesionController extends Controller
     /**
      * Procesar código QR escaneado
      */
-    /**
-     * Procesar código QR escaneado
-     */
     public function procesarQR(Request $request)
     {
         $request->validate([
@@ -43,9 +40,9 @@ class SesionController extends Controller
             
             // Buscar alumno por NPI (con o sin guión)
             $alumno = Alumno::where(function($query) use ($request, $npiLimpio) {
-                $query->where('npi', $request->npi) // Buscar tal como se ingresó
-                      ->orWhere('npi', $npiLimpio)    // Buscar sin guión
-                      ->orWhereRaw("REPLACE(npi, '-', '') = ?", [$npiLimpio]); // Buscar comparando sin guión
+                $query->where('npi', $request->npi)
+                      ->orWhere('npi', $npiLimpio)
+                      ->orWhereRaw("REPLACE(npi, '-', '') = ?", [$npiLimpio]);
             })
             ->where('is_active', true)
             ->first();
@@ -57,14 +54,13 @@ class SesionController extends Controller
                 ]);
             }
 
-            // VALIDACIÓN MEJORADA: Usar transacción de base de datos para evitar condiciones de carrera
             DB::beginTransaction();
             
             try {
                 // Verificar si ya tiene una sesión activa CON BLOQUEO
                 $sesionActiva = Sesion::where('alumno_id', $alumno->id)
                                       ->where('estado', 'activa')
-                                      ->lockForUpdate() // Importante: bloquea la fila
+                                      ->lockForUpdate()
                                       ->first();
 
                 if ($sesionActiva) {
@@ -76,7 +72,7 @@ class SesionController extends Controller
                         'duracion_minutos' => $sesionActiva->hora_inicio->diffInMinutes(now())
                     ]);
                     
-                    DB::commit(); // Confirmar transacción
+                    DB::commit();
                     
                     return response()->json([
                         'success' => true,
@@ -113,7 +109,7 @@ class SesionController extends Controller
                         'usuario_inicio_id' => Auth::id()
                     ]);
 
-                    DB::commit(); // Confirmar transacción
+                    DB::commit();
                     
                     return response()->json([
                         'success' => true,
@@ -127,7 +123,7 @@ class SesionController extends Controller
                 
             } catch (\Exception $e) {
                 DB::rollback();
-                throw $e; // Re-lanzar para el catch exterior
+                throw $e;
             }
 
         } catch (\Exception $e) {
@@ -143,7 +139,6 @@ class SesionController extends Controller
      */
     public function index(Request $request)
     {
-        // Solo admin puede ver todas las sesiones
         if (!Auth::user()->isAdmin()) {
             return redirect()->route('sesiones.scanner')
                            ->with('error', 'No tienes permisos para ver el historial completo');
@@ -191,7 +186,6 @@ class SesionController extends Controller
 
         return view('sesiones.activas', compact('sesionesActivas'));
     }
-
 
     /**
      * Finalizar sesión directamente (sin QR)
@@ -302,26 +296,6 @@ class SesionController extends Controller
     }
 
     /**
-     * Eliminar sesión (solo admin)
-     */
-    public function destroy($id)
-    {
-        if (!Auth::user()->isAdmin()) {
-            return redirect()->back()->with('error', 'No tienes permisos para esta acción');
-        }
-
-        try {
-            $sesion = Sesion::findOrFail($id);
-            $sesion->delete();
-
-            return redirect()->route('sesiones.index')->with('success', 'Sesión eliminada correctamente');
-            
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error al eliminar sesión: ' . $e->getMessage());
-        }
-    }
-
-    /**
      * Reporte diario
      */
     public function reporteDiario(Request $request)
@@ -348,5 +322,130 @@ class SesionController extends Controller
         ];
 
         return view('sesiones.reporte-diario', compact('sesiones', 'estadisticas'));
+    }
+
+    /**
+     * Mostrar formulario de edición (NUEVO)
+     */
+    public function edit($id)
+    {
+        if (!Auth::user()->isAdmin()) {
+            return redirect()->back()->with('error', 'No tienes permisos para esta acción');
+        }
+
+        $sesion = Sesion::with(['alumno', 'usuarioInicio', 'usuarioFin'])->findOrFail($id);
+        
+        return view('sesiones.edit', compact('sesion'));
+    }
+
+    /**
+     * Actualizar sesión (NUEVO)
+     */
+    public function update(Request $request, $id)
+    {
+        if (!Auth::user()->isAdmin()) {
+            return redirect()->back()->with('error', 'No tienes permisos para esta acción');
+        }
+
+        $sesion = Sesion::findOrFail($id);
+
+        $validated = $request->validate([
+            'fecha' => 'required|date',
+            'hora_inicio' => 'required|date_format:H:i',
+            'hora_fin' => 'nullable|date_format:H:i',
+            'actividad' => 'required|string|max:500',
+            'estado' => 'required|in:activa,finalizada,cancelada',
+            'observaciones' => 'nullable|string|max:1000'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Construir datetime completo
+            $fechaInicio = Carbon::parse($validated['fecha'] . ' ' . $validated['hora_inicio']);
+            $fechaFin = null;
+            $duracionMinutos = null;
+
+            if ($validated['hora_fin']) {
+                $fechaFin = Carbon::parse($validated['fecha'] . ' ' . $validated['hora_fin']);
+                
+                // Validar que hora_fin sea posterior a hora_inicio
+                if ($fechaFin->lte($fechaInicio)) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', 'La hora de fin debe ser posterior a la hora de inicio');
+                }
+                
+                $duracionMinutos = $fechaInicio->diffInMinutes($fechaFin);
+            }
+
+            // Si el estado cambia a finalizada, asegurar que tenga hora_fin
+            if ($validated['estado'] === 'finalizada' && !$fechaFin) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Las sesiones finalizadas deben tener hora de fin');
+            }
+
+            // Si el estado cambia a activa, remover hora_fin
+            if ($validated['estado'] === 'activa') {
+                $fechaFin = null;
+                $duracionMinutos = null;
+            }
+
+            $sesion->update([
+                'fecha' => $validated['fecha'],
+                'hora_inicio' => $fechaInicio,
+                'hora_fin' => $fechaFin,
+                'duracion_minutos' => $duracionMinutos,
+                'actividad' => $validated['actividad'],
+                'estado' => $validated['estado'],
+                'observaciones' => $validated['observaciones'] ?? null,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('sesiones.index')
+                ->with('success', 'Sesión actualizada correctamente');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Error al actualizar sesión: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Eliminar sesión (ACTUALIZADO - Responde JSON para AJAX)
+     */
+    public function destroy($id)
+    {
+        if (!Auth::user()->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para esta acción'
+            ], 403);
+        }
+
+        try {
+            $sesion = Sesion::findOrFail($id);
+            
+            // Guardar info antes de eliminar para el mensaje
+            $alumnoNombre = $sesion->alumno->nombre_completo;
+            $fecha = $sesion->fecha->format('d/m/Y');
+            
+            $sesion->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Sesión de {$alumnoNombre} del {$fecha} eliminada correctamente"
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar sesión: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

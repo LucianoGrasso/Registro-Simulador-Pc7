@@ -47,9 +47,9 @@
                     </x-nav-link>
 
                     <!-- Scanner QR -->
-                    <x-nav-link :href="route('sesiones.scanner')" :active="request()->routeIs('sesiones.*')"
+                    <x-nav-link :href="route('sesiones.scanner')" :active="request()->routeIs('sesiones.scanner')"
                         class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                               {{ request()->routeIs('sesiones.*') 
+                               {{ request()->routeIs('sesiones.scanner') 
                                    ? 'border-red-400 text-white' 
                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                         <span class="text-lg">📱</span>
@@ -65,6 +65,16 @@
                                        : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                             <span class="text-lg">🎓</span>
                             <span>{{ __('Alumnos') }}</span>
+                        </x-nav-link>
+
+                        <!-- NUEVO: Sesiones (Admin) -->
+                        <x-nav-link :href="route('sesiones.index')" :active="request()->routeIs('sesiones.index') || request()->routeIs('sesiones.edit')"
+                            class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
+                                   {{ request()->routeIs('sesiones.index') || request()->routeIs('sesiones.edit')
+                                       ? 'border-red-400 text-white' 
+                                       : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                            <span class="text-lg">📋</span>
+                            <span>{{ __('Sesiones') }}</span>
                         </x-nav-link>
 
                         <!-- Reportes -->
@@ -176,14 +186,24 @@
                     🎓 {{ __('Gestión de Alumnos') }}
                 </x-responsive-nav-link>
 
-                <!-- Historial -->
+                <!-- NUEVO: Sesiones (Admin) -->
                 <x-responsive-nav-link :href="route('sesiones.index')" :active="request()->routeIs('sesiones.index')" class="text-gray-300 hover:text-white hover:bg-gray-700">
-                    📋 {{ __('Historial de Sesiones') }}
+                    📋 {{ __('Gestión de Sesiones') }}
                 </x-responsive-nav-link>
 
                 <!-- Reportes -->
-                <x-responsive-nav-link :href="route('reportes.diario')" :active="request()->routeIs('reportes.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
+                <x-responsive-nav-link :href="route('reportes.index')" :active="request()->routeIs('reportes.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
                     📊 {{ __('Reportes') }}
+                </x-responsive-nav-link>
+
+                <!-- Soporte -->
+                <x-responsive-nav-link :href="route('soporte.index')" :active="request()->routeIs('soporte.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
+                    🛠️ {{ __('Soporte') }}
+                </x-responsive-nav-link>
+            @else
+                <!-- Soporte -->
+                <x-responsive-nav-link :href="route('soporte.create')" :active="request()->routeIs('soporte.*')" class="text-gray-300 hover:text-white hover:bg-gray-700">
+                    🛠️ {{ __('Soporte') }}
                 </x-responsive-nav-link>
             @endif
         </div>
@@ -205,11 +225,14 @@
                     <x-responsive-nav-link :href="route('alumnos.create')" class="text-gray-300 hover:text-white hover:bg-gray-700">
                         ➕ {{ __('Nuevo Alumno') }}
                     </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('profile.edit')" class="text-gray-300 hover:text-white hover:bg-gray-700">
+                        ⚙️ {{ __('Configuración') }}
+                    </x-responsive-nav-link>
+                @else
+                    <x-responsive-nav-link :href="route('operador.info')" class="text-gray-300 hover:text-white hover:bg-gray-700">
+                        👤 {{ __('Mi Información') }}
+                    </x-responsive-nav-link>
                 @endif
-                
-                <x-responsive-nav-link :href="route('profile.edit')" class="text-gray-300 hover:text-white hover:bg-gray-700">
-                    ⚙️ {{ __('Configuración') }}
-                </x-responsive-nav-link>
 
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}">

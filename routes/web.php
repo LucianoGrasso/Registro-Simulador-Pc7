@@ -13,6 +13,11 @@ Route::get('/', function () {
     return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
+// Dashboard datos actualizados (AJAX) - DEBE IR ANTES que /dashboard
+Route::get('/dashboard/datos', [DashboardController::class, 'datosActualizados'])
+    ->middleware(['auth'])
+    ->name('dashboard.datos');
+
 // Dashboard principal (redirige según rol)
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
@@ -26,29 +31,21 @@ Route::middleware('auth')->group(function () {
     // Scanner QR (página principal para operadores)
     Route::get('/scanner', [SesionController::class, 'scanner'])->name('sesiones.scanner');
     Route::post('/scanner/procesar', [SesionController::class, 'procesarQR'])->name('sesiones.procesar-qr');
-
+    
+    // Finalizar sesión (disponible para todos)
     Route::post('/sesiones/{id}/finalizar-directa', [SesionController::class, 'finalizarSesionDirecta'])
-    ->name('sesiones.finalizar-directa');
+        ->name('sesiones.finalizar-directa');
     
     // Sesiones activas (todos pueden ver)
     Route::get('/sesiones/activas', [SesionController::class, 'activas'])->name('sesiones.activas');
     Route::get('/sesiones/activas-ajax', [SesionController::class, 'activasAjax'])->name('sesiones.activas-ajax');
-    
-    // Dashboard datos actualizados (AJAX)
-    Route::get('/dashboard/datos', [DashboardController::class, 'datosActualizados'])->name('dashboard.datos');
     
     // Información del operador (reemplaza profile para operadores)
     Route::get('/mi-informacion', function () {
         return view('operador.info');
     })->name('operador.info');
     
-    // Perfil de usuario (solo para administradores)
-    Route::middleware('admin')->group(function () {
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    });
-
+    // Soporte - Para todos los usuarios
     Route::get('/soporte/crear', [SoporteController::class, 'create'])->name('soporte.create');
     Route::post('/soporte', [SoporteController::class, 'store'])->name('soporte.store');
     Route::get('/mis-tickets', [SoporteController::class, 'misTickets'])->name('soporte.mis-tickets');
@@ -56,6 +53,11 @@ Route::middleware('auth')->group(function () {
     // ===== RUTAS SOLO PARA ADMINISTRADORES =====
     
     Route::middleware('admin')->group(function () {
+        
+        // Perfil de usuario
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
         
         // CRUD completo de alumnos
         Route::resource('alumnos', AlumnoController::class);
@@ -65,10 +67,25 @@ Route::middleware('auth')->group(function () {
         Route::get('/alumnos/{id}/descargar-qr', [AlumnoController::class, 'descargarQR'])->name('alumnos.descargar-qr');
         Route::patch('/alumnos/{id}/toggle-estado', [AlumnoController::class, 'toggleEstado'])->name('alumnos.toggle-estado');
         
-        // Gestión de sesiones (historial completo)
+        // ===== GESTIÓN DE SESIONES (ADMIN) - NUEVAS RUTAS =====
+        
+        // Listado y gestión completa de sesiones
         Route::get('/sesiones', [SesionController::class, 'index'])->name('sesiones.index');
-        Route::post('/sesiones/{id}/finalizar', [SesionController::class, 'finalizarManual'])->name('sesiones.finalizar');
+        
+        // Editar sesión
+        Route::get('/sesiones/{id}/editar', [SesionController::class, 'edit'])->name('sesiones.edit');
+        Route::put('/sesiones/{id}', [SesionController::class, 'update'])->name('sesiones.update');
+        
+        // Eliminar sesión
         Route::delete('/sesiones/{id}', [SesionController::class, 'destroy'])->name('sesiones.destroy');
+        
+        // Finalizar manualmente
+        Route::post('/sesiones/{id}/finalizar', [SesionController::class, 'finalizarManual'])->name('sesiones.finalizar');
+        
+        // Reporte diario de sesiones
+        Route::get('/sesiones/reporte-diario', [SesionController::class, 'reporteDiario'])->name('sesiones.reporte.diario');
+        
+        // ===== FIN NUEVAS RUTAS DE SESIONES =====
         
         // Reportes
         Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
@@ -80,7 +97,7 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('reportes.mensual');
         })->name('reportes.diario');
         
-        // Soporte
+        // Soporte - Admin
         Route::get('/admin/soporte', [SoporteController::class, 'index'])->name('soporte.index');
         Route::get('/admin/soporte/{soporte}', [SoporteController::class, 'show'])->name('soporte.show');
         Route::patch('/admin/soporte/{soporte}/estado', [SoporteController::class, 'updateEstado'])->name('soporte.update-estado');
