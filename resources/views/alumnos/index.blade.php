@@ -236,7 +236,7 @@
                                             </form>
 
                                             <!-- Eliminar (solo si no tiene sesiones activas) -->
-                                            @if($alumno->sesiones_activas_count == 0)
+                                            <!-- @if($alumno->sesiones_activas_count == 0)
                                                 <form method="POST" action="{{ route('alumnos.destroy', $alumno->id) }}" class="inline">
                                                     @csrf
                                                     @method('DELETE')
@@ -250,7 +250,7 @@
                                                         Eliminar
                                                     </button>
                                                 </form>
-                                            @endif
+                                            @endif -->
                                         </div>
                                     </td>
                                 </tr>
