@@ -200,4 +200,33 @@ class DashboardController extends Controller
             'timestamp' => now()->format('H:i:s')
         ]);
     }
+    /**
+     * AJAX: Obtener sesiones activas para el dashboard
+     */
+    public function sesionesActivasAjax()
+    {
+        $sesionesActivas = Sesion::activas()
+                                ->with('alumno')
+                                ->orderBy('hora_inicio', 'asc')
+                                ->get();
+
+        $sesionesFormatted = $sesionesActivas->map(function ($sesion) {
+            return [
+                'id' => $sesion->id,
+                'alumno' => [
+                    'nombre_completo' => $sesion->alumno->nombre_completo,
+                    'npi' => $sesion->alumno->npi
+                ],
+                'hora_inicio' => $sesion->hora_inicio->format('H:i'),
+                'tiempo_transcurrido' => $sesion->tiempo_transcurrido,
+                'actividad' => $sesion->actividad,
+                'necesita_atencion' => $sesion->necesitaAtencion()
+            ];
+        });
+
+        return response()->json([
+            'count' => $sesionesActivas->count(),
+            'sesiones' => $sesionesFormatted
+        ]);
+    }
 }

@@ -61,7 +61,7 @@
                     <!-- Línea separadora -->
                     <div class="mt-4 pt-4 border-t border-red-400">
                         <p class="text-center text-gray-500 text-xs">
-                            Versión 1.1 | Sistema interno de gestión
+                            Versión 1.1
                         </p>
                     </div>
                 </div>
