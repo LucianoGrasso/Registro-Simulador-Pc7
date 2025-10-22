@@ -182,7 +182,7 @@
                         <span class="text-xs text-gray-500">(Top {{ $topAlumnosMes->count() }})</span>
                     </h3>
                     @if($topAlumnosMes->count() > 0)
-                        <div class="h-64 overflow-y-auto border border-gray-100 rounded p-2 bg-gray-50">
+                        <div class="h-96 overflow-y-auto border border-gray-100 rounded p-2 bg-gray-50">
                             <div class="space-y-2">
                                 @foreach($topAlumnosMes as $index => $alumnoData)
                                     <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm border">

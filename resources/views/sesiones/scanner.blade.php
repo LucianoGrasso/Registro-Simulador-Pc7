@@ -72,7 +72,7 @@
                             <!-- Modo Manual -->
                             <div id="modo-manual">
                                 <div>
-                                    <label for="npi" class="block text-sm font-medium text-gray-700">
+                                    <label for="npi" class="block text-sm font-medium text-gray-700 mb-3">
                                         NPI del Alumno
                                     </label>
                                     <input type="text" 
@@ -118,18 +118,85 @@
                                 </div>
                             </div>
                             
-                            <div>
-                                <label for="actividad" class="block text-sm font-medium text-gray-700">
-                                    Actividad
+                             <!-- Tipo de Práctica (Checkboxes) -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">
+                                Tipo de Práctica
+                            </label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <!-- Práctica en seco -->
+                                <label class="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                                    <input type="checkbox" 
+                                           name="actividades[]" 
+                                           value="Práctica en seco"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        <span class="font-medium">🎭 Práctica en seco</span>
+                                        <span class="block text-xs text-gray-500">Sin software de simulación</span>
+                                    </span>
                                 </label>
-                                <textarea id="actividad" 
-                                         name="actividad" 
-                                         rows="3"
-                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                         placeholder="Describe la actividad del simulador"
-                                         style="color: #000 !important; background: #fff !important;"
-                                         required></textarea>
+
+                                <!-- Emergencia en vuelo -->
+                                <label class="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                                    <input type="checkbox" 
+                                           name="actividades[]" 
+                                           value="Emergencia en vuelo"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        <span class="font-medium">🚨 Emergencia en vuelo</span>
+                                        <span class="block text-xs text-gray-500">Procedimientos de emergencia</span>
+                                    </span>
+                                </label>
+
+                                <!-- Trabajo en pista -->
+                                <label class="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                                    <input type="checkbox" 
+                                           name="actividades[]" 
+                                           value="Trabajo en pista"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        <span class="font-medium">🛫 Trabajo en pista</span>
+                                        <span class="block text-xs text-gray-500">Despegue y aterrizaje</span>
+                                    </span>
+                                </label>
+
+                                <!-- Acrobacias -->
+                                <label class="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                                    <input type="checkbox" 
+                                           name="actividades[]" 
+                                           value="Acrobacias"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        <span class="font-medium">✈️ Acrobacias</span>
+                                        <span class="block text-xs text-gray-500">Maniobras acrobáticas</span>
+                                    </span>
+                                </label>
+
+                                <!-- Navegación -->
+                                <label class="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                                    <input type="checkbox" 
+                                           name="actividades[]" 
+                                           value="Navegación"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        <span class="font-medium">🧭 Navegación</span>
+                                        <span class="block text-xs text-gray-500">Vuelo por instrumentos y navegación</span>
+                                    </span>
+                                </label>
+
+                                <!-- Vuelo instrumental -->
+                                <label class="flex items-center p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                                    <input type="checkbox" 
+                                           name="actividades[]" 
+                                           value="Vuelo instrumental"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        <span class="font-medium">📡 Vuelo instrumental</span>
+                                        <span class="block text-xs text-gray-500">IFR y aproximaciones</span>
+                                    </span>
+                                </label>
                             </div>
+                        </div>
                             
                             <button type="submit" 
                                     id="btn-procesar"
@@ -469,9 +536,20 @@ function actualizarContadorSesiones() {
                     return;
                 }
                 
-                if (!document.getElementById('actividad').value.trim()) {
-                    mostrarError('Por favor describe la actividad');
+                // Validar que haya al menos una actividad seleccionada
+                const checkboxes = document.querySelectorAll('input[name="actividades[]"]:checked');
+                if (checkboxes.length === 0) {
+                    mostrarError('Por favor selecciona al menos un tipo de práctica');
                     return;
+                }
+
+                // Construir texto de actividad desde los checkboxes
+                const actividades = Array.from(checkboxes).map(cb => cb.value);
+                let actividadTexto = actividades.join(', ');
+
+                const observaciones = document.getElementById('observaciones')?.value.trim();
+                if (observaciones) {
+                    actividadTexto += ` - ${observaciones}`;
                 }
                 
                 // Mostrar loading
@@ -482,7 +560,7 @@ function actualizarContadorSesiones() {
                 const formData = new FormData();
                 formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
                 formData.append('npi', npiValue);
-                formData.append('actividad', document.getElementById('actividad').value);
+                formData.append('actividad', actividadTexto);  // ← SOLO ESTA LÍNEA, ELIMINA TODO LO DE ARRIBA QUE ESTÁ DUPLICADO
                 
                 fetch('{{ route("sesiones.procesar-qr") }}', {
                     method: 'POST',

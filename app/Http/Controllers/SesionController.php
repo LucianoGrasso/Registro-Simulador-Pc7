@@ -27,6 +27,7 @@ class SesionController extends Controller
     /**
      * Procesar código QR escaneado
      */
+
     public function procesarQR(Request $request)
     {
         $request->validate([
@@ -41,8 +42,8 @@ class SesionController extends Controller
             // Buscar alumno por NPI (con o sin guión)
             $alumno = Alumno::where(function($query) use ($request, $npiLimpio) {
                 $query->where('npi', $request->npi)
-                      ->orWhere('npi', $npiLimpio)
-                      ->orWhereRaw("REPLACE(npi, '-', '') = ?", [$npiLimpio]);
+                    ->orWhere('npi', $npiLimpio)
+                    ->orWhereRaw("REPLACE(npi, '-', '') = ?", [$npiLimpio]);
             })
             ->where('is_active', true)
             ->first();
@@ -59,9 +60,9 @@ class SesionController extends Controller
             try {
                 // Verificar si ya tiene una sesión activa CON BLOQUEO
                 $sesionActiva = Sesion::where('alumno_id', $alumno->id)
-                                      ->where('estado', 'activa')
-                                      ->lockForUpdate()
-                                      ->first();
+                                    ->where('estado', 'activa')
+                                    ->lockForUpdate()
+                                    ->first();
 
                 if ($sesionActiva) {
                     // FINALIZAR sesión existente
@@ -87,8 +88,8 @@ class SesionController extends Controller
                 } else {
                     // DOBLE VERIFICACIÓN antes de crear nueva sesión
                     $verificacionExtra = Sesion::where('alumno_id', $alumno->id)
-                                              ->where('estado', 'activa')
-                                              ->exists();
+                                            ->where('estado', 'activa')
+                                            ->exists();
                     
                     if ($verificacionExtra) {
                         DB::rollback();
@@ -104,7 +105,7 @@ class SesionController extends Controller
                         'npi' => $request->npi,
                         'fecha' => today(),
                         'hora_inicio' => now(),
-                        'actividad' => $request->actividad,
+                        'actividad' => $request->actividad, // Ahora contiene las actividades seleccionadas
                         'estado' => 'activa',
                         'usuario_inicio_id' => Auth::id()
                     ]);
