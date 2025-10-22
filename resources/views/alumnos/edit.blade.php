@@ -179,22 +179,6 @@
                             </div>
                         </div>
 
-                        <!-- Información adicional -->
-                        <div class="mt-8 p-4 bg-gray-50 rounded-lg">
-                            <h4 class="text-sm font-medium text-gray-900 mb-2">ℹ️ Información del Registro</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                                <div>
-                                    <strong>Creado:</strong> {{ $alumno->created_at->format('d/m/Y H:i') }}
-                                </div>
-                                <div>
-                                    <strong>Última modificación:</strong> {{ $alumno->updated_at->format('d/m/Y H:i') }}
-                                </div>
-                                <div>
-                                    <strong>Total sesiones:</strong> {{ $alumno->sesiones_count ?? 0 }}
-                                </div>
-                            </div>
-                        </div>
-                        
                         <!-- Botones de acción -->
                         <div class="mt-8 flex items-center justify-between">
                             <div class="flex space-x-3">
@@ -206,32 +190,6 @@
                                    class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded">
                                     ❌ Cancelar
                                 </a>
-                            </div>
-                            
-                            <!-- Botones adicionales -->
-                            <div class="flex space-x-2">
-                                @if($alumno->qr_image_path)
-                                    <form method="POST" action="{{ route('alumnos.regenerar-qr', $alumno->id) }}" class="inline">
-                                        @csrf
-                                        <button type="submit" 
-                                                class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm"
-                                                onclick="return confirm('¿Regenerar el código QR?')">
-                                            🔄 Regenerar QR
-                                        </button>
-                                    </form>
-                                @endif
-                                
-                                @if($alumno->sesiones_activas_count == 0)
-                                    <form method="POST" action="{{ route('alumnos.destroy', $alumno->id) }}" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm"
-                                                onclick="return confirm('¿Estás seguro de eliminar este alumno? Esta acción no se puede deshacer.')">
-                                            🗑️ Eliminar
-                                        </button>
-                                    </form>
-                                @endif
                             </div>
                         </div>
                     </form>

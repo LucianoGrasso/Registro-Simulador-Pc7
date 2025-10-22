@@ -176,16 +176,6 @@
                                             Descargar QR
                                         </a>
                                         
-                                        <form method="POST" action="{{ route('alumnos.regenerar-qr', $alumno->id) }}" class="w-full">
-                                            @csrf
-                                            <button type="submit" 
-                                                    class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded inline-flex items-center justify-center"
-                                                    onclick="return confirm('¿Regenerar el código QR?')">
-                                                <span class="mr-2">🔄</span>
-                                                Regenerar QR
-                                            </button>
-                                        </form>
-                                        
                                         <button onclick="imprimirQR()" 
                                                 class="w-full bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded inline-flex items-center justify-center">
                                             <span class="mr-2">🖨️</span>

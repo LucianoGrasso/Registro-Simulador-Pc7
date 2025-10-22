@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Registro de Sesiones - Simulador') }}
+                {{ __('Scanner de Sesiones') }}
             </h2>
             <div class="text-sm text-gray-600">
                 Usuario: {{ auth()->user()->name }}
@@ -53,7 +53,7 @@
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 bg-white border-b border-gray-200">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                            📱 Scanner QR
+                            Identificación de Alumno
                         </h3>
                         
                         <form id="scanner-form" class="space-y-4">
@@ -79,7 +79,7 @@
                                            id="npi" 
                                            name="npi" 
                                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-lg font-mono"
-                                           placeholder="Ingresa el NPI (ejemplo: 341725-9)"
+                                           placeholder="Ingresa el NPI (Con o sin guión)"
                                            autocomplete="off"
                                            style="color: #000 !important; background: #fff !important;">
                                 </div>
@@ -265,7 +265,7 @@
                     <div class="text-center text-gray-500 py-8">
                         <div class="text-4xl mb-2">✈️</div>
                         <div>No hay sesiones activas</div>
-                        <div class="text-sm">Los simuladores están disponibles</div>
+                        <div class="text-sm">El simulador esta disponible</div>
                     </div>
                 @endforelse
             </div>
@@ -355,7 +355,7 @@ function actualizarContadorSesiones() {
             <div class="text-center text-gray-500 py-8">
                 <div class="text-4xl mb-2">✈️</div>
                 <div>No hay sesiones activas</div>
-                <div class="text-sm">Los simuladores están disponibles</div>
+                <div class="text-sm">El simulador esta disponible</div>
             </div>
         `;
     }
@@ -660,7 +660,7 @@ function actualizarContadorSesiones() {
                                 <div class="text-center text-gray-500 py-8">
                                     <div class="text-4xl mb-2">✈️</div>
                                     <div>No hay sesiones activas</div>
-                                    <div class="text-sm">Los simuladores están disponibles</div>
+                                    <div class="text-sm">El simulador esta disponible</div>
                                 </div>
                             `;
                         } else {
