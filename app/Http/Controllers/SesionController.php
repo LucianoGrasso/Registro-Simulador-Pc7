@@ -284,16 +284,21 @@ class SesionController extends Controller
      */
     private function iniciarTelemetria($sesionId)
     {
-        // Ajusta esta ruta a donde tengas realmente tu receptor.py
-        $scriptPath = base_path('registro_simulador/pruebas_telemetria/receptor.py');
+        // 1. PEGA AQUÍ LA SEGUNDA RUTA QUE COPIASTE DEL CMD
+        // IMPORTANTE: Usa DOBLE barra invertida (\\) en lugar de una sola (\)
+        $pythonExe = "C:\\Users\\Pc-cockpit\\AppData\\Local\\Python\\bin\\python.exe"; 
+
+        // 2. Ruta del script (Laravel la detecta sola)
+        $scriptPath = base_path('pruebas_telemetria/receptor.py');
         
-        // Comando para Windows: start /B ejecuta en background sin ventana bloqueante
-        $comando = "start /B python \"$scriptPath\" " . $sesionId;
+        // 3. Comando explícito: Le decimos a Windows "Usa ESTE python, no el otro"
+        // start /B ejecuta en segundo plano
+        $comando = "start /B \"\" \"$pythonExe\" \"$scriptPath\" " . $sesionId;
         
-        // Ejecutamos sin esperar respuesta
+        // Ejecutar
         pclose(popen($comando, "r"));
         
-        Log::info("Telemetría iniciada para sesión: $sesionId");
+        Log::info("Telemetría iniciada con ruta explícita: $comando");
     }
 
     /**
