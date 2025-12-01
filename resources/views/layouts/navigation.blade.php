@@ -77,6 +77,15 @@
                             <span>{{ __('Sesiones') }}</span>
                         </x-nav-link>
 
+                        <x-nav-link :href="route('vuelos.index')" :active="request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')"
+                                    class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
+                                        {{ request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')
+                                            ? 'border-red-400 text-white' 
+                                            : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                            <span class="text-lg">✈️</span>
+                            <span>{{ __('Vuelos') }}</span>
+                        </x-nav-link>
+
                         <!-- Reportes -->
                         <x-nav-link :href="route('reportes.index')" :active="request()->routeIs('reportes.*')"
                             class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none

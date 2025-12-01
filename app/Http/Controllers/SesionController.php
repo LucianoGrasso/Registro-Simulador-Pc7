@@ -27,7 +27,6 @@ class SesionController extends Controller
     /**
      * Procesar código QR escaneado
      */
-
     public function procesarQR(Request $request)
     {
         $request->validate([
@@ -72,6 +71,16 @@ class SesionController extends Controller
                         'usuario_fin_id' => Auth::id(),
                         'duracion_minutos' => $sesionActiva->hora_inicio->diffInMinutes(now())
                     ]);
+
+                    // --- TELEMETRÍA: PARAR GRABACIÓN ---
+                    $pathFlags = storage_path('app/flags');
+                    if (!file_exists($pathFlags)) mkdir($pathFlags, 0777, true);
+                    file_put_contents($pathFlags . '/stop_' . $sesionActiva->id . '.txt', 'STOP');
+                    
+                    // Actualizamos nombre del archivo en BD
+                    $sesionActiva->archivo_vuelo = "vuelo_sesion_" . $sesionActiva->id . ".json";
+                    $sesionActiva->save();
+                    // -----------------------------------
                     
                     DB::commit();
                     
@@ -105,10 +114,18 @@ class SesionController extends Controller
                         'npi' => $request->npi,
                         'fecha' => today(),
                         'hora_inicio' => now(),
-                        'actividad' => $request->actividad, // Ahora contiene las actividades seleccionadas
+                        'actividad' => $request->actividad,
                         'estado' => 'activa',
                         'usuario_inicio_id' => Auth::id()
                     ]);
+
+                    // --- TELEMETRÍA: INICIAR GRABACIÓN ---
+                    // Asegúrate que esta ruta coincida con donde guardaste el script
+                    $scriptPath = base_path('registro_simulador/pruebas_telemetria/receptor.py');
+                    // Comando Windows para background (start /B)
+                    $comando = "start /B python \"$scriptPath\" " . $sesion->id;
+                    pclose(popen($comando, "r"));
+                    // -------------------------------------
 
                     DB::commit();
                     
@@ -168,9 +185,9 @@ class SesionController extends Controller
         }
 
         $sesiones = $query->orderBy('fecha', 'desc')
-                         ->orderBy('hora_inicio', 'desc')
-                         ->paginate(20)
-                         ->withQueryString();
+                          ->orderBy('hora_inicio', 'desc')
+                          ->paginate(20)
+                          ->withQueryString();
         
         return view('sesiones.index', compact('sesiones'));
     }
@@ -215,6 +232,15 @@ class SesionController extends Controller
                 'usuario_fin_id' => Auth::id(),
                 'duracion_minutos' => $sesion->hora_inicio->diffInMinutes(now())
             ]);
+
+            // --- TELEMETRÍA: PARAR GRABACIÓN ---
+            $pathFlags = storage_path('app/flags');
+            if (!file_exists($pathFlags)) mkdir($pathFlags, 0777, true);
+            file_put_contents($pathFlags . '/stop_' . $sesion->id . '.txt', 'STOP');
+            
+            $sesion->archivo_vuelo = "vuelo_sesion_" . $sesion->id . ".json";
+            $sesion->save();
+            // -----------------------------------
             
             DB::commit();
             
@@ -288,6 +314,15 @@ class SesionController extends Controller
                 'usuario_fin_id' => Auth::id(),
                 'duracion_minutos' => $sesion->hora_inicio->diffInMinutes(now())
             ]);
+
+            // --- TELEMETRÍA: PARAR GRABACIÓN ---
+            $pathFlags = storage_path('app/flags');
+            if (!file_exists($pathFlags)) mkdir($pathFlags, 0777, true);
+            file_put_contents($pathFlags . '/stop_' . $sesion->id . '.txt', 'STOP');
+            
+            $sesion->archivo_vuelo = "vuelo_sesion_" . $sesion->id . ".json";
+            $sesion->save();
+            // -----------------------------------
             
             return redirect()->back()->with('success', 'Sesión finalizada manualmente');
             

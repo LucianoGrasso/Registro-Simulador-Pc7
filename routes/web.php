@@ -7,6 +7,7 @@ use App\Http\Controllers\AlumnoController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\SoporteController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\VueloController;
 
 // Página de bienvenida (redirige al login si no está autenticado)
 Route::get('/', function () {
@@ -50,6 +51,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/soporte', [SoporteController::class, 'store'])->name('soporte.store');
     Route::get('/mis-tickets', [SoporteController::class, 'misTickets'])->name('soporte.mis-tickets');
     
+    // Visualizador de Vuelos (Telemetría)
+    Route::get('/historial-vuelos', [VueloController::class, 'index'])->name('vuelos.index');
+    Route::get('/vuelos/ver/{archivo}', [VueloController::class, 'show'])->name('vuelos.show');
+
+
     // ===== RUTAS SOLO PARA ADMINISTRADORES =====
     
     Route::middleware('admin')->group(function () {
