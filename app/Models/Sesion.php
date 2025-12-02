@@ -25,6 +25,7 @@ class Sesion extends Model
         'usuario_fin_id',
         'detalles',
         'observaciones',
+        'archivo_vuelo',
     ];
 
     protected $casts = [
