@@ -7,7 +7,7 @@ import sys
 
 # --- CONFIGURACIÓN ---
 UDP_IP = "0.0.0.0"
-UDP_PORT = 49003
+UDP_PORT = 49005
 
 # 1. Recibimos el ID de la sesión desde Laravel (Argumento de consola)
 if len(sys.argv) < 2:
