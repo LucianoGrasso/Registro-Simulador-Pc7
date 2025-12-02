@@ -75,8 +75,20 @@ except Exception as e:
 # --- GUARDADO FINAL ---
 nombre_archivo = f"vuelo_sesion_{SESSION_ID}.json"
 ruta_completa = os.path.join(dir_vuelos, nombre_archivo)
+ruta_log = os.path.join(dir_script, "debug_error.log") # Archivo para ver errores
 
-with open(ruta_completa, "w") as f:
-    json.dump(ruta_vuelo, f)
-
-print(f"Vuelo guardado: {nombre_archivo}")
+try:
+    print(f"Guardando {len(ruta_vuelo)} puntos en {ruta_completa}")
+    
+    # Si no hay puntos, guardamos al menos una lista vacía [] para que no pese 0KB
+    if not ruta_vuelo:
+        with open(ruta_log, "a") as log:
+            log.write(f"Sesion {SESSION_ID}: ALERTA - 0 datos recibidos de X-Plane.\n")
+            
+    with open(ruta_completa, "w") as f:
+        json.dump(ruta_vuelo, f)
+        
+except Exception as e:
+    # Si falla, escribimos el error en un archivo de texto para que puedas leerlo
+    with open(ruta_log, "a") as log:
+        log.write(f"Sesion {SESSION_ID}: Error al guardar JSON: {str(e)}\n")
