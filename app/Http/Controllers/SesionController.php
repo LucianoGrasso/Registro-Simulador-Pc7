@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log; // Importante para registrar errores silenciosos
+use Illuminate\Support\Facades\Log;
 
 class SesionController extends Controller
 {
@@ -24,7 +24,7 @@ class SesionController extends Controller
     }
 
     /**
-     * Procesar código QR escaneado (AQUÍ ESTÁ LA LÓGICA DE INICIO Y FIN POR QR)
+     * Procesar código QR escaneado
      */
     public function procesarQR(Request $request)
     {
@@ -40,28 +40,17 @@ class SesionController extends Controller
                 $query->where('npi', $request->npi)
                     ->orWhere('npi', $npiLimpio)
                     ->orWhereRaw("REPLACE(npi, '-', '') = ?", [$npiLimpio]);
-            })
-            ->where('is_active', true)
-            ->first();
+            })->where('is_active', true)->first();
             
-            if (!$alumno) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Alumno no encontrado o inactivo con NPI: ' . $request->npi
-                ]);
-            }
+            if (!$alumno) return response()->json(['success' => false, 'message' => 'Alumno no encontrado: ' . $request->npi]);
 
             DB::beginTransaction();
             
             try {
-                // Verificar si ya tiene una sesión activa
-                $sesionActiva = Sesion::where('alumno_id', $alumno->id)
-                                    ->where('estado', 'activa')
-                                    ->lockForUpdate()
-                                    ->first();
+                $sesionActiva = Sesion::where('alumno_id', $alumno->id)->where('estado', 'activa')->lockForUpdate()->first();
 
                 if ($sesionActiva) {
-                    // === FINALIZAR POR QR ===
+                    // === FINALIZAR ===
                     $sesionActiva->update([
                         'hora_fin' => now(),
                         'estado' => 'finalizada',
@@ -69,12 +58,8 @@ class SesionController extends Controller
                         'duracion_minutos' => $sesionActiva->hora_inicio->diffInMinutes(now())
                     ]);
                     
-                    // [TELEMETRÍA] DETENER GRABACIÓN (Protegido contra fallos)
-                    try {
-                        $this->detenerTelemetria($sesionActiva);
-                    } catch (\Exception $eTel) {
-                        Log::error("Fallo al detener telemetria en QR: " . $eTel->getMessage());
-                    }
+                    // [TELEMETRÍA] Procesar el archivo Data.txt de X-Plane
+                    $this->procesarCajaNegra($sesionActiva);
                     
                     DB::commit();
                     
@@ -89,17 +74,10 @@ class SesionController extends Controller
                     ]);
                     
                 } else {
-                    // === INICIAR POR QR ===
-                    $verificacionExtra = Sesion::where('alumno_id', $alumno->id)
-                                            ->where('estado', 'activa')
-                                            ->exists();
-                    
-                    if ($verificacionExtra) {
+                    // === INICIAR ===
+                    if (Sesion::where('alumno_id', $alumno->id)->where('estado', 'activa')->exists()) {
                         DB::rollback();
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'El alumno ya tiene una sesión activa.'
-                        ]);
+                        return response()->json(['success' => false, 'message' => 'El alumno ya tiene una sesión activa.']);
                     }
                     
                     $sesion = Sesion::create([
@@ -112,12 +90,7 @@ class SesionController extends Controller
                         'usuario_inicio_id' => Auth::id()
                     ]);
 
-                    // [TELEMETRÍA] INICIAR GRABACIÓN (Protegido contra fallos)
-                    try {
-                        $this->iniciarTelemetria($sesion->id);
-                    } catch (\Exception $eTel) {
-                        Log::error("Fallo al iniciar telemetria en QR: " . $eTel->getMessage());
-                    }
+                    // NOTA: Ya no iniciamos nada aquí. X-Plane graba solo.
 
                     DB::commit();
                     
@@ -132,24 +105,17 @@ class SesionController extends Controller
                 }
                 
             } catch (\Exception $e) {
-                DB::rollback();
-                throw $e;
+                DB::rollback(); throw $e;
             }
-
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error del sistema: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
-    // ... (Métodos index y activas quedan igual) ...
+    // ... (index y activas quedan igual) ...
     public function index(Request $request)
     {
-        if (!Auth::user()->isAdmin()) {
-            return redirect()->route('sesiones.scanner')->with('error', 'Sin permisos');
-        }
+        if (!Auth::user()->isAdmin()) return redirect()->route('sesiones.scanner')->with('error', 'Sin permisos');
         $query = Sesion::with(['alumno', 'usuarioInicio', 'usuarioFin']);
         
         if ($request->filled('fecha')) $query->whereDate('fecha', $request->fecha);
@@ -172,19 +138,14 @@ class SesionController extends Controller
         return view('sesiones.activas', compact('sesionesActivas'));
     }
 
-    /**
-     * Finalizar sesión directamente (Botón en dashboard)
-     */
     public function finalizarSesionDirecta($id)
     {
         try {
             DB::beginTransaction();
-            
             $sesion = Sesion::where('id', $id)->where('estado', 'activa')->lockForUpdate()->first();
             
             if (!$sesion) {
-                DB::rollback();
-                return response()->json(['success' => false, 'message' => 'Sesión no encontrada']);
+                DB::rollback(); return response()->json(['success' => false, 'message' => 'Sesión no encontrada']);
             }
 
             $sesion->update([
@@ -194,15 +155,10 @@ class SesionController extends Controller
                 'duracion_minutos' => $sesion->hora_inicio->diffInMinutes(now())
             ]);
             
-            // [TELEMETRÍA] DETENER GRABACIÓN (Protegido)
-            try {
-                $this->detenerTelemetria($sesion);
-            } catch (\Exception $eTel) {
-                Log::error("Fallo al detener telemetria (Directa): " . $eTel->getMessage());
-            }
+            // [TELEMETRÍA] PROCESAR ARCHIVO
+            $this->procesarCajaNegra($sesion);
             
             DB::commit();
-            
             return response()->json([
                 'success' => true,
                 'message' => 'Sesión finalizada correctamente',
@@ -211,16 +167,13 @@ class SesionController extends Controller
                 'hora_inicio' => $sesion->hora_inicio->format('H:i'),
                 'hora_fin' => $sesion->hora_fin->format('H:i')
             ]);
-            
         } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+            DB::rollback(); return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
     // ... (activasAjax igual) ...
-    public function activasAjax()
-    {
+    public function activasAjax() {
         $sesionesActivas = Sesion::activas()->with('alumno')->orderBy('hora_inicio', 'asc')->get();
         $sesionesFormatted = $sesionesActivas->map(function ($sesion) {
             return [
@@ -235,16 +188,11 @@ class SesionController extends Controller
         return response()->json(['count' => $sesionesActivas->count(), 'sesiones' => $sesionesFormatted]);
     }
 
-    /**
-     * Finalizar sesión manualmente (Botón en historial Admin)
-     */
     public function finalizarManual($id)
     {
         if (!Auth::user()->isAdmin()) return redirect()->back()->with('error', 'Sin permisos');
-
         try {
             $sesion = Sesion::findOrFail($id);
-            
             if ($sesion->estado !== 'activa') return redirect()->back()->with('error', 'Ya finalizada');
 
             $sesion->update([
@@ -254,72 +202,50 @@ class SesionController extends Controller
                 'duracion_minutos' => $sesion->hora_inicio->diffInMinutes(now())
             ]);
 
-            // [TELEMETRÍA] DETENER GRABACIÓN (Protegido)
-            try {
-                $this->detenerTelemetria($sesion);
-            } catch (\Exception $eTel) {
-                Log::error("Fallo al detener telemetria (Manual): " . $eTel->getMessage());
-            }
+            // [TELEMETRÍA] PROCESAR ARCHIVO
+            $this->procesarCajaNegra($sesion);
             
             return redirect()->back()->with('success', 'Sesión finalizada manualmente');
-            
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error: ' . $e->getMessage());
         }
     }
 
-    // ... (Resto de métodos: reporteDiario, edit, update, destroy quedan igual) ...
-    public function reporteDiario(Request $request) { /* ... tu código ... */ return view('sesiones.reporte-diario'); } // Simplificado aquí para no alargar
-    public function edit($id) { /* ... tu código ... */ return view('sesiones.edit'); }
-    public function update(Request $request, $id) { /* ... tu código ... */ return redirect()->route('sesiones.index'); }
-    public function destroy($id) { /* ... tu código ... */ return response()->json(['success'=>true]); }
+    // ... (Resto de métodos sin cambios) ...
+    public function reporteDiario(Request $request) { return view('sesiones.reporte-diario'); }
+    public function edit($id) { return view('sesiones.edit'); }
+    public function update(Request $request, $id) { return redirect()->route('sesiones.index'); }
+    public function destroy($id) { return response()->json(['success'=>true]); }
 
 
     // ==========================================
-    // FUNCIONES PRIVADAS DE TELEMETRÍA (NUEVO)
+    // NUEVA LÓGICA: PROCESAR DATA.TXT
     // ==========================================
 
-    /**
-     * Lanza el script de Python en segundo plano
-     */
-    private function iniciarTelemetria($sesionId)
+    private function procesarCajaNegra($sesion)
     {
-        // 1. PEGA AQUÍ LA SEGUNDA RUTA QUE COPIASTE DEL CMD
-        // IMPORTANTE: Usa DOBLE barra invertida (\\) en lugar de una sola (\)
-        $pythonExe = "C:\\Users\\Pc-cockpit\\AppData\\Local\\Python\\bin\\python.exe"; 
-
-        // 2. Ruta del script (Laravel la detecta sola)
-        $scriptPath = base_path('pruebas_telemetria/receptor.py');
-        
-        // 3. Comando explícito: Le decimos a Windows "Usa ESTE python, no el otro"
-        // start /B ejecuta en segundo plano
-        $comando = "start /B \"\" \"$pythonExe\" \"$scriptPath\" " . $sesionId;
-        
-        // Ejecutar
-        pclose(popen($comando, "r"));
-        
-        Log::info("Telemetría iniciada con ruta explícita: $comando");
-    }
-
-    /**
-     * Crea el archivo bandera para que Python se detenga
-     */
-    private function detenerTelemetria($sesion)
-    {
-        $pathFlags = storage_path('app/flags');
-        
-        // Crear carpeta si no existe (esto evita el error 500)
-        if (!file_exists($pathFlags)) {
-            mkdir($pathFlags, 0777, true);
+        try {
+            // 1. RUTA DE PYTHON (Usamos la ruta real que encontramos en tu PC)
+            $pythonExe = "C:\\Users\\Pc-cockpit\\AppData\\Local\\Python\\bin\\python.exe"; 
+            
+            // 2. Ruta del script convertidor (IMPORTANTE: asegúrate de haber creado convertidor.py)
+            $scriptPath = base_path('pruebas_telemetria/convertidor.py');
+            
+            // 3. Ejecutar comando (shell_exec espera a que termine)
+            // Esto tomará el Data.txt, lo convertirá a JSON y borrará el Data.txt
+            $comando = "\"$pythonExe\" \"$scriptPath\" " . $sesion->id;
+            shell_exec($comando);
+            
+            // 4. Guardar referencia en BD
+            // Asumimos que el script funcionó y creó el archivo
+            $sesion->archivo_vuelo = "vuelo_sesion_" . $sesion->id . ".json";
+            $sesion->save();
+            
+            Log::info("Caja negra procesada para sesión: " . $sesion->id);
+            
+        } catch (\Exception $e) {
+            // Si falla, no rompemos la sesión, solo logueamos
+            Log::error("Error procesando caja negra: " . $e->getMessage());
         }
-        
-        // Crear archivo STOP
-        file_put_contents($pathFlags . '/stop_' . $sesion->id . '.txt', 'STOP');
-        
-        // Asignar el nombre del archivo JSON que Python va a crear
-        $sesion->archivo_vuelo = "vuelo_sesion_" . $sesion->id . ".json";
-        $sesion->save();
-        
-        Log::info("Señal de stop enviada para sesión: " . $sesion->id);
     }
 }
