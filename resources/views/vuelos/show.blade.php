@@ -3,27 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Debriefing de Vuelo - Armada de Chile</title>
+    <title>Debriefing de Vuelo - {{ $sesion ? $sesion->alumno->nombre_completo : 'Archivo' }}</title>
     
-    <script src="https://cdn.tailwindcss.com"></script> 
-
+    <!-- LEAFLET -->
     <link rel="stylesheet" href="{{ asset('leaflet/leaflet.css') }}" />
     <script src="{{ asset('leaflet/leaflet.js') }}"></script>
 
+    <!-- TAILWIND (Por CDN para asegurar estilos bonitos aunque no cargue el build) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
-        body { margin: 0; padding: 0; background-color: #1a202c; }
+        body { margin: 0; padding: 0; background-color: #1a202c; font-family: system-ui, -apple-system, sans-serif; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
-        /* CAJA DE INFORMACIÓN (Ahora abajo) */
+        /* CAJA DE INFORMACIÓN (Estilo Tarjeta) */
         .overlay-panel {
             position: absolute; 
-            bottom: 30px; /* <--- CAMBIO: Antes era top: 20px */
+            bottom: 30px; 
             left: 20px; 
-            z-index: 2000; /* <--- Aumentamos Z-Index para asegurar que se vea */
+            z-index: 2000; 
             background: rgba(255, 255, 255, 0.95);
-            padding: 15px; border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            max-width: 300px;
+            padding: 20px; 
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 320px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        /* LEYENDA DE ALTITUD (Nuevo) */
+        .legend-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 12px;
+            text-align: center;
+        }
+        .gradient-bar {
+            width: 150px;
+            height: 10px;
+            background: linear-gradient(to right, #ef4444, #eab308, #22c55e);
+            border-radius: 5px;
+            margin-bottom: 4px;
+        }
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            color: #4b5563;
+            font-weight: 600;
         }
 
         /* BOTÓN VOLVER */
@@ -31,113 +63,113 @@
             position: absolute; 
             top: 20px; 
             right: 20px; 
-            z-index: 2000; /* <--- SUPER IMPORTANTE: Para que el mapa no bloquee el clic */
-            background: #2d3748; 
+            z-index: 2000; 
+            background-color: #1f2937; 
             color: white; 
-            padding: 10px 20px;
-            border-radius: 5px; 
+            padding: 8px 16px;
+            border-radius: 6px; 
             text-decoration: none; 
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            cursor: pointer;
-            transition: background 0.3s;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .btn-back:hover { background: #4a5568; }
+        .btn-back:hover { background-color: #374151; transform: translateY(-1px); }
     </style>
 </head>
 <body>
 
-    <a href="{{ route('vuelos.index') }}" class="btn-back">← Volver al Historial</a>
+    <!-- Botón Volver -->
+    <a href="{{ route('sesiones.index') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+        </svg>
+        Volver al Historial
+    </a>
 
-    <div class="overlay-panel">
-        
+    <!-- Panel de Información -->
+    <div class="overlay-panel font-sans">
         @if($sesion)
-            <div class="border-b pb-3 mb-3">
-                <h2 class="text-lg font-bold text-gray-800 leading-tight">
+            <div class="border-b border-gray-200 pb-3 mb-3">
+                <h2 class="text-xl font-bold text-gray-800 leading-tight">
                     {{ $sesion->alumno->nombre_completo }}
                 </h2>
-                <p class="text-xs text-gray-500 font-mono mt-1">NPI: {{ $sesion->npi }}</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded">Alumno</span>
+                    <p class="text-xs text-gray-500 font-mono">NPI: {{ $sesion->npi }}</p>
+                </div>
             </div>
 
             <div class="mb-4">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Actividad Realizada</p>
-                <p class="text-sm text-gray-700 mt-1 leading-snug">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Actividad</p>
+                <p class="text-sm text-gray-700 leading-snug">
                     {{ $sesion->actividad }}
                 </p>
             </div>
 
-            <div class="flex justify-between mb-4 text-xs text-gray-500 border-b pb-3">
+            <div class="grid grid-cols-2 gap-4 mb-4 border-b border-gray-200 pb-3">
                 <div>
-                    <span class="block font-bold text-gray-400">FECHA</span>
-                    {{ $sesion->fecha->format('d/m/Y') }}
+                    <span class="block text-xs font-bold text-gray-400">FECHA</span>
+                    <span class="text-sm font-semibold text-gray-700">{{ $sesion->fecha->format('d/m/Y') }}</span>
                 </div>
                 <div>
-                    <span class="block font-bold text-gray-400">HORA</span>
-                    {{ $sesion->hora_inicio->format('H:i') }}
-                </div>
-                <div>
-                    <span class="block font-bold text-gray-400">DURACIÓN</span>
-                    {{ $sesion->duracion_minutos ?? '-' }} min
+                    <span class="block text-xs font-bold text-gray-400">HORA</span>
+                    <span class="text-sm font-semibold text-gray-700">{{ $sesion->hora_inicio->format('H:i') }}</span>
                 </div>
             </div>
         @else
-            <h2 class="text-lg font-bold text-gray-800 border-b pb-2 mb-2">Archivo Histórico</h2>
-            <p class="text-xs text-gray-500 mb-4">{{ $archivoJson }}</p>
+            <h2 class="text-lg font-bold text-gray-800 border-b pb-2 mb-2">Vuelo Sin Sesión</h2>
+            <p class="text-xs text-gray-500 mb-4 break-all">{{ $archivoJson }}</p>
         @endif
         
+        <!-- Stats Telemetría -->
         <div>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Telemetría</p>
-            
-            <div id="status" class="text-sm text-blue-600 font-semibold mb-2">Cargando...</div>
+            <div class="flex justify-between items-end mb-2">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Datos de Vuelo</p>
+                <div id="status" class="text-xs text-blue-600 font-semibold animate-pulse">Cargando...</div>
+            </div>
 
             <div class="hidden grid grid-cols-2 gap-2" id="flight-stats">
-                <div class="bg-gray-50 p-2 rounded">
-                    <span class="block text-xs text-gray-500">Techo Máx</span>
-                    <span class="font-bold text-gray-800"><span id="max-alt">-</span> ft</span>
+                <div class="bg-gray-50 p-2 rounded border border-gray-100">
+                    <span class="block text-xs text-gray-500">Altitud Máx</span>
+                    <span class="font-bold text-gray-800 text-lg"><span id="max-alt">-</span> <span class="text-xs font-normal">ft</span></span>
                 </div>
-                <div class="bg-gray-50 p-2 rounded">
-                    <span class="block text-xs text-gray-500">Tiempo Vuelo</span>
-                    <span class="font-bold text-gray-800"><span id="duration">-</span> min</span>
+                <div class="bg-gray-50 p-2 rounded border border-gray-100">
+                    <span class="block text-xs text-gray-500">Duración</span>
+                    <span class="font-bold text-gray-800 text-lg"><span id="duration">-</span> <span class="text-xs font-normal">min</span></span>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Leyenda de Colores (Nueva) -->
+    <div class="legend-panel font-sans">
+        <div class="text-xs font-bold text-gray-500 mb-1 uppercase">Altitud (pies)</div>
+        <div class="gradient-bar"></div>
+        <div class="legend-labels">
+            <span>0</span>
+            <span id="mid-legend">1500</span>
+            <span id="max-legend">3000+</span>
+        </div>
+    </div>
+
+    <!-- Mapa -->
     <div id="map"></div>
 
     <script>
         // 1. Configuración del Mapa
-        // Coordenadas Base: Concón (SCVM)
-        var map = L.map('map').setView([-32.949, -71.554], 14);
+        var map = L.map('map', {zoomControl: false}).setView([-32.949, -71.554], 14);
+        L.control.zoom({position: 'topright'}).addTo(map);
 
-        // CAPA DE MAPA (Tiles)
-        // MODO HÍBRIDO: Intenta cargar local, si no hay, usa online (para cuando desarrollas en casa)
-        
-        // --- OPCIÓN A: ONLINE (Para probar hoy en tu casa) ---
-        // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        //     maxZoom: 19,
-        //     attribution: '© OpenStreetMap'
-        // }).addTo(map);
-
-        // --- OPCIÓN B: OFFLINE (Para el simulador real) ---
-        // Descomenta esto cuando tengas la carpeta public/mapas
-        
         L.tileLayer('/mapas/mapas_naval/{z}/{x}/{y}.png', {
-            minZoom: 12,
-            maxZoom: 16,
-            tms: true,
-            attribution: 'Escuela Naval',
-            errorTileUrl: '', // Opcional: imagen si falta un tile
-
-            updateWhenIdle: false,      // Carga INMEDIATAMENTE al moverte, no espera a que frenes
-            updateWhenZooming: false,   // Carga mientras haces zoom
-            keepBuffer: 12,             // Carga muchos más cuadros alrededor "por si acaso" (usa más RAM, pero es más fluido)
-            fadeAnimation: false,       // Quita el efecto de "aparecer suave", hace que la imagen aparezca de golpe (se siente más rápido)
-            maxNativeZoom: 16           // Asegura que sepa cuál es el tope real
+            minZoom: 10, maxZoom: 15, tms: true, attribution: 'Escuela Naval', errorTileUrl: '',
+            updateWhenIdle: false, updateWhenZooming: false, keepBuffer: 10, fadeAnimation: false, maxNativeZoom: 15
         }).addTo(map);
-        
 
-        // Función para mezclar dos colores (Inicio -> Fin) según un porcentaje (0.0 a 1.0)
+        // --- FUNCIONES GRADIENTE ---
         function interpolateColor(color1, color2, factor) {
             var result = color1.slice();
             for (var i = 0; i < 3; i++) {
@@ -146,34 +178,21 @@
             return 'rgb(' + result[0] + ',' + result[1] + ',' + result[2] + ')';
         }
 
-        // Función principal: Devuelve el color según la altitud relativa
-        // Define los colores RGB aquí: [Rojo, Verde, Azul]
-        var cRojo = [239, 68, 68];   // Tailwind red-500 (Bajo)
-        var cAmarillo = [234, 179, 8]; // Tailwind yellow-500 (Medio)
-        var cVerde = [34, 197, 94];  // Tailwind green-500 (Alto)
+        var cRojo = [239, 68, 68];   
+        var cAmarillo = [234, 179, 8]; 
+        var cVerde = [34, 197, 94];  
 
         function getGradientColor(alt, minAlt, maxAlt) {
-            // Proteccion contra division por cero si el vuelo fue plano
             if (maxAlt === minAlt) return 'rgb(' + cAmarillo.join(',') + ')';
-
-            // 1. Calcular porcentaje de altitud (0.0 a 1.0)
             var pct = (alt - minAlt) / (maxAlt - minAlt);
-
-            // 2. Interpolar (Mezclar) colores
             if (pct < 0.5) {
-                // Mitad inferior: Mezclar Rojo -> Amarillo
-                // Re-normalizamos pct para que vaya de 0.0 a 1.0 en esta mitad
-                var subPct = pct * 2; 
-                return interpolateColor(cRojo, cAmarillo, subPct);
+                return interpolateColor(cRojo, cAmarillo, pct * 2);
             } else {
-                // Mitad superior: Mezclar Amarillo -> Verde
-                var subPct = (pct - 0.5) * 2;
-                return interpolateColor(cAmarillo, cVerde, subPct);
+                return interpolateColor(cAmarillo, cVerde, (pct - 0.5) * 2);
             }
         }
 
-
-        // --- CARGA Y DIBUJO DE DATOS ---
+        // --- CARGAR DATOS ---
         var archivoUrl = "{{ asset('vuelos/' . $archivoJson) }}";
 
         fetch(archivoUrl)
@@ -183,51 +202,83 @@
                     document.getElementById('status').innerText = "Sin datos."; return;
                 }
 
-                // 1. PRE-ANÁLISIS: Encontrar Altitud Mínima y Máxima del vuelo
+                // Analizar Altitudes
                 var alts = data.map(p => p.alt);
-                var minAlt = Math.min(...alts);
+                var minAlt = 0; // Fijamos el suelo en 0
                 var maxAlt = Math.max(...alts);
-                // Ajuste para que el "rojo" puro sea cerca del suelo, no solo el punto más bajo del vuelo
-                minAlt = Math.max(0, minAlt - 100); 
+                
+                // Si voló muy bajo, ajustamos la escala para que no se vea todo rojo
+                if (maxAlt < 1000) maxAlt = 1000; 
+
+                // Actualizar leyenda visualmente con los datos reales
+                document.getElementById('mid-legend').innerText = Math.round(maxAlt / 2);
+                document.getElementById('max-legend').innerText = Math.round(maxAlt) + "+";
 
                 var flightLayer = L.featureGroup();
                 var allPoints = [];
 
-                // 2. DIBUJO SEGMENTADO CON GRADIENTE
                 for (var i = 0; i < data.length - 1; i++) {
                     var pActual = data[i];
                     var pSiguiente = data[i+1];
 
                     var latlngs = [[pActual.lat, pActual.lon], [pSiguiente.lat, pSiguiente.lon]];
-                    
-                    // Calculamos el color exacto para la altitud de este punto
                     var colorGradiente = getGradientColor(pActual.alt, minAlt, maxAlt);
 
-                    L.polyline(latlngs, {
-                        color: colorGradiente, weight: 5, opacity: 1, smoothFactor: 0
-                    }).addTo(flightLayer);
+                    // --- AQUÍ ESTÁ LA MAGIA DEL CLIC ---
+                    // Creamos la línea y le agregamos un popup con la info
+                    var linea = L.polyline(latlngs, {
+                        color: colorGradiente, 
+                        weight: 6, // Un poco más gruesa para que sea fácil hacer clic
+                        opacity: 1, 
+                        smoothFactor: 0
+                    });
 
+                    // Mensaje al hacer clic
+                    var contenidoPopup = `
+                        <div style="text-align: center;">
+                            <strong style="color: #4b5563;">Detalle del Punto</strong><br>
+                            <span style="font-size: 14px; font-weight: bold;">Altitud: ${Math.round(pActual.alt)} ft</span><br>
+                            <span style="font-size: 11px; color: #6b7280;">Lat: ${pActual.lat.toFixed(4)}, Lon: ${pActual.lon.toFixed(4)}</span>
+                        </div>
+                    `;
+                    
+                    linea.bindPopup(contenidoPopup, {closeButton: false});
+                    
+                    // Efecto Hover (Opcional: cambia grosor al pasar mouse)
+                    linea.on('mouseover', function(e) { e.target.setStyle({weight: 10}); });
+                    linea.on('mouseout', function(e) { e.target.setStyle({weight: 6}); });
+
+                    linea.addTo(flightLayer);
                     allPoints.push([pActual.lat, pActual.lon]);
                 }
 
                 flightLayer.addTo(map);
 
-                // 3. Ajustes finales de UI
+                // Zoom
                 var bounds = L.polyline(allPoints).getBounds();
                 map.fitBounds(bounds, { maxZoom: 15, padding: [50, 50] });
 
+                // Marcadores
                 var pInicio = data[0]; var pFin = data[data.length-1];
-                L.circleMarker([pInicio.lat, pInicio.lon], {color: 'white', fillColor: 'black', fillOpacity: 1, radius: 6}).addTo(map).bindPopup("Inicio: " + Math.round(pInicio.alt) + "ft");
-                L.circleMarker([pFin.lat, pFin.lon], {color: 'white', fillColor: 'blue', fillOpacity: 1, radius: 6}).addTo(map).bindPopup("Fin: " + Math.round(pFin.alt) + "ft");
+                L.circleMarker([pInicio.lat, pInicio.lon], {color: 'white', fillColor: 'black', fillOpacity: 1, radius: 6}).addTo(map).bindPopup("<b>Inicio de Vuelo</b>");
+                L.circleMarker([pFin.lat, pFin.lon], {color: 'white', fillColor: 'blue', fillOpacity: 1, radius: 6}).addTo(map).bindPopup("<b>Fin de Vuelo</b>");
 
-                document.getElementById('status').innerText = "Visualización completada";
-                document.getElementById('status').className = "text-sm text-green-600 font-semibold";
+                // UI Final
+                document.getElementById('status').innerText = "Visualización lista";
+                document.getElementById('status').className = "text-xs text-green-600 font-bold uppercase";
+                document.getElementById('status').classList.remove('animate-pulse');
+                
                 document.getElementById('flight-stats').classList.remove('hidden');
-                document.getElementById('max-alt').innerText = Math.round(maxAlt);
-                var durationMin = ((data[data.length-1].ts - data[0].ts) / 60).toFixed(1);
-                document.getElementById('duration').innerText = durationMin;
+                document.getElementById('max-alt').innerText = Math.round(Math.max(...alts));
+                
+                // Duración
+                var duracion = 0;
+                if(data[0].ts && data[data.length-1].ts) {
+                    duracion = ((data[data.length-1].ts - data[0].ts) / 60).toFixed(1);
+                }
+                document.getElementById('duration').innerText = duracion;
             })
-            .catch(err => { console.error(err); document.getElementById('status').innerText = "Error cargando."; });
+            .catch(err => { console.error(err); document.getElementById('status').innerText = "Error cargando datos."; });
     </script>
 </body>
 </html>
