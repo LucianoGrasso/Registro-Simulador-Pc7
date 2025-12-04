@@ -37,19 +37,19 @@ class VueloController extends Controller
             $filename = $file->getFilename();
             if ($file->getExtension() !== 'json') continue;
 
-            $parts = explode('_', str_replace('.json', '', $filename));
-            
-            if (count($parts) >= 3) {
+            // Usar Regex para extraer fecha y hora de manera más robusta
+            if (preg_match('/vuelo_(\d{8})_(\d{6})/', $filename, $matches)) {
                 try {
-                    $fechaStr = $parts[1] . $parts[2];
+                    $fechaStr = $matches[1] . $matches[2];
                     $fechaObj = Carbon::createFromFormat('YmdHis', $fechaStr);
                     $fechaBonita = $fechaObj->format('d/m/Y H:i');
                     $timestamp = $fechaObj->timestamp;
                 } catch (\Exception $e) {
-                    $fechaBonita = 'Fecha desconocida';
+                    $fechaBonita = 'Fecha inválida';
                     $timestamp = 0;
                 }
             } else {
+                // Fallback si el nombre no cumple el formato
                 $fechaBonita = 'Sin fecha';
                 $timestamp = $file->getMTime();
             }

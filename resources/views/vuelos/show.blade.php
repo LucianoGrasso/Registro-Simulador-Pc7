@@ -6,8 +6,8 @@
     <title>Debriefing de Vuelo - {{ $sesion ? $sesion->alumno->nombre_completo : 'Archivo' }}</title>
     
     <!-- LEAFLET -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="{{ asset('leaflet/leaflet.css') }}" />
+    <script src="{{ asset('leaflet/leaflet.js') }}"></script>
 
     <!-- TAILWIND -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -109,13 +109,6 @@
 
     <div id="map"></div>
 
-    <!-- Script para pasar variables de Blade a JS -->
-    <script>
-        // Inyectamos la URL desde Blade antes de cargar el script principal
-        // Usamos asset() para generar la URL completa y json_encode para escaparla correctamente
-        window.archivoUrl = {!! json_encode(asset('vuelos/' . $archivoJson)) !!};
-    </script>
-
     <script>
         var map = L.map('map', {zoomControl: false}).setView([-32.949, -71.554], 14);
         L.control.zoom({position: 'topright'}).addTo(map);
@@ -142,14 +135,10 @@
             else return interpolateColor(cAmarillo, cVerde, (pct - 0.5) * 2);
         }
 
-        // Usamos la variable global definida arriba
-        fetch(window.archivoUrl)
-            .then(res => { 
-                if (!res.ok) {
-                    throw new Error("Archivo no encontrado: " + window.archivoUrl); 
-                }
-                return res.json(); 
-            })
+        var archivoUrl = "{{ asset('vuelos/' . $archivoJson) }}";
+
+        fetch(archivoUrl)
+            .then(res => { if (!res.ok) throw new Error("Archivo no encontrado"); return res.json(); })
             .then(data => {
                 if (data.length === 0) {
                     document.getElementById('status').innerText = "Sin datos."; return;
