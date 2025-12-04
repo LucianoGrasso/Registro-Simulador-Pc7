@@ -59,7 +59,7 @@
                                             <span class="relative">{{ $vuelo['size'] }}</span>
                                         </span>
                                     </td>
-                                    <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                                    <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center text-blue-600">
                                         <a href="{{ route('vuelos.show', $vuelo['archivo']) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition ease-in-out duration-150">
                                             Ver Mapa 🗺️
                                         </a>

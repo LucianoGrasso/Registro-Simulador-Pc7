@@ -37,8 +37,8 @@ class VueloController extends Controller
             $filename = $file->getFilename();
             if ($file->getExtension() !== 'json') continue;
 
-            // Usar Regex para extraer fecha y hora de manera más robusta
-            if (preg_match('/vuelo_(\d{8})_(\d{6})/', $filename, $matches)) {
+            // Usar Regex para extraer fecha y hora de manera más robusta (Case insensitive)
+            if (preg_match('/vuelo_(\d{8})_(\d{6})/i', $filename, $matches)) {
                 try {
                     $fechaStr = $matches[1] . $matches[2];
                     $fechaObj = Carbon::createFromFormat('YmdHis', $fechaStr);
@@ -52,6 +52,9 @@ class VueloController extends Controller
                 // Fallback si el nombre no cumple el formato
                 $fechaBonita = 'Sin fecha';
                 $timestamp = $file->getMTime();
+                
+                // DEBUG: Guardar nombres que fallan para investigar
+                // File::append(public_path('debug_vuelos.txt'), $filename . "\n");
             }
 
             // Buscar si hay sesión asociada
