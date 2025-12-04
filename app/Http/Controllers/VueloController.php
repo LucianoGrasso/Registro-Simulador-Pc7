@@ -9,7 +9,7 @@ use App\Models\Sesion; // <--- AGREGADO: Importante para buscar los datos del al
 
 class VueloController extends Controller
 {
-    // Listado de archivos (Este lo dejamos igual, funciona bien para mantenimiento)
+    // Listado de archivos
     public function index()
     {
         $path = public_path('vuelos');
@@ -19,6 +19,18 @@ class VueloController extends Controller
         }
 
         $files = File::files($path);
+        
+        // 1. Obtener todos los nombres de archivo para hacer una sola consulta
+        $filenames = array_map(function($file) {
+            return $file->getFilename();
+        }, $files);
+
+        // 2. Buscar todas las sesiones que coincidan con estos archivos
+        $sesiones = Sesion::whereIn('archivo_vuelo', $filenames)
+                          ->with('alumno')
+                          ->get()
+                          ->keyBy('archivo_vuelo');
+
         $vuelos = [];
 
         foreach ($files as $file) {
@@ -42,11 +54,20 @@ class VueloController extends Controller
                 $timestamp = $file->getMTime();
             }
 
+            // Buscar si hay sesión asociada
+            $alumno = 'Sin Asignar';
+            $sesion = $sesiones->get($filename);
+            
+            if ($sesion && $sesion->alumno) {
+                $alumno = $sesion->alumno->nombre_completo;
+            }
+
             $vuelos[] = [
                 'archivo' => $filename,
                 'fecha' => $fechaBonita,
                 'timestamp' => $timestamp,
-                'size' => round($file->getSize() / 1024, 2) . ' KB'
+                'size' => number_format($file->getSize() / 1048576, 2) . ' MB', // Convertir a MB
+                'alumno' => $alumno
             ];
         }
 

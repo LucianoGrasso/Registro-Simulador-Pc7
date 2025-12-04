@@ -46,7 +46,6 @@
                         <span>{{ __('Dashboard') }}</span>
                     </x-nav-link>
 
-                    <!-- Scanner QR -->
                     <x-nav-link :href="route('sesiones.scanner')" :active="request()->routeIs('sesiones.scanner')"
                         class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
                                {{ request()->routeIs('sesiones.scanner') 
@@ -54,6 +53,16 @@
                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                         <span class="text-lg">📱</span>
                         <span>{{ __('Scanner') }}</span>
+                    </x-nav-link>
+
+                    <!-- Vuelos (Para todos) -->
+                    <x-nav-link :href="route('vuelos.index')" :active="request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')"
+                                class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
+                                    {{ request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')
+                                        ? 'border-red-400 text-white' 
+                                        : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                        <span class="text-lg">✈️</span>
+                        <span>{{ __('Vuelos') }}</span>
                     </x-nav-link>
 
                     @if(auth()->user()->isAdmin())
@@ -75,15 +84,6 @@
                                        : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                             <span class="text-lg">📋</span>
                             <span>{{ __('Sesiones') }}</span>
-                        </x-nav-link>
-
-                        <x-nav-link :href="route('vuelos.index')" :active="request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')"
-                                    class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                                        {{ request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')
-                                            ? 'border-red-400 text-white' 
-                                            : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
-                            <span class="text-lg">✈️</span>
-                            <span>{{ __('Vuelos') }}</span>
                         </x-nav-link>
 
                         <!-- Reportes -->
