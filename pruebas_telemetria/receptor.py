@@ -6,89 +6,81 @@ import os
 import sys
 
 # --- CONFIGURACIÓN ---
-UDP_IP = "0.0.0.0"
-UDP_PORT = 49005
+UDP_IP = "0.0.0.0"   # Escucha en todas las interfaces
+UDP_PORT = 49005     # Debe coincidir con X-Plane
 
-# 1. Recibimos el ID de la sesión desde Laravel (Argumento de consola)
+# ID de Sesión
 if len(sys.argv) < 2:
-    print("Error: Debes indicar el ID de la sesión.")
-    sys.exit(1)
+    SESSION_ID = "test_manual"
+else:
+    SESSION_ID = sys.argv[1]
 
-SESSION_ID = sys.argv[1]
-
-# Definimos rutas clave
-# Ruta actual del script
+# Rutas
 dir_script = os.path.dirname(os.path.abspath(__file__))
-# Ruta donde Laravel pondrá la señal de STOP (storage/app/flags)
+# Ajuste para subir desde 'pruebas_telemetria' a la raíz
 dir_flags = os.path.join(dir_script, "..", "storage", "app", "flags")
-# Ruta donde guardaremos el JSON final (public/vuelos)
 dir_vuelos = os.path.join(dir_script, "..", "public", "vuelos")
-
-# Nombre del archivo de señal que esperaremos
 archivo_stop = os.path.join(dir_flags, f"stop_{SESSION_ID}.txt")
 
-# Aseguramos que existan las carpetas
-if not os.path.exists(dir_flags): os.makedirs(dir_flags)
-if not os.path.exists(dir_vuelos): os.makedirs(dir_vuelos)
+# Crear carpetas si no existen
+os.makedirs(dir_flags, exist_ok=True)
+os.makedirs(dir_vuelos, exist_ok=True)
 
-print(f"--- GRABANDO VUELO PARA SESIÓN {SESSION_ID} ---")
-print(f"Esperando señal de parada en: {archivo_stop}")
+print(f"--- RECEPTOR UDP INICIADO (Puerto {UDP_PORT}) ---")
+print(f"Sesión: {SESSION_ID}")
 
+# Iniciar Socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT))
-sock.settimeout(0.5) # Timeout corto para revisar el archivo STOP frecuentemente
+sock.settimeout(1.0) # Timeout de 1 seg para revisar el archivo STOP
 
 ruta_vuelo = []
+ultimo_tiempo = 0
 
 try:
     while True:
-        # A. ¿ME MANDARON A PARAR?
+        # A. Revisar Señal de STOP
         if os.path.exists(archivo_stop):
-            print("¡Señal de STOP recibida!")
-            # Borramos el archivo de señal para limpiar
-            try:
-                os.remove(archivo_stop)
-            except:
-                pass
-            break # Salimos del bucle para guardar
+            print("¡Señal de STOP recibida! Guardando...")
+            try: os.remove(archivo_stop)
+            except: pass
+            break 
 
-        # B. ESCUCHAR X-PLANE
+        # B. Escuchar Datos
         try:
             data, addr = sock.recvfrom(1024)
             
+            # Filtro de tiempo: Guardar máximo 1 punto por segundo para no saturar
+            tiempo_actual = time.time()
+            if tiempo_actual - ultimo_tiempo < 1.0:
+                continue
+
             if data[0:4] == b'DATA':
-                indice = struct.unpack('<i', data[5:9])[0]
-                if indice == 20: 
-                    valores = struct.unpack('<8f', data[9:41])
-                    lat, lon, alt = valores[0], valores[1], valores[2]
+                longitud = len(data)
+                for i in range(5, longitud, 36):
+                    if i + 36 > longitud: break
+                    bloque_id = struct.unpack('<i', data[i:i+4])[0]
                     
-                    ruta_vuelo.append({
-                        "lat": lat, "lon": lon, "alt": alt, "ts": time.time()
-                    })
-                    
+                    if bloque_id == 20: # Fila 20
+                        valores = struct.unpack('<8f', data[i+4:i+36])
+                        lat, lon, alt = valores[0], valores[1], valores[2]
+                        
+                        ruta_vuelo.append({
+                            "lat": lat, "lon": lon, "alt": alt, "ts": tiempo_actual
+                        })
+                        ultimo_tiempo = tiempo_actual
+                        
         except socket.timeout:
-            continue # Si no llega nada, seguimos el bucle para chequear el STOP
+            continue
 
 except Exception as e:
     print(f"Error: {e}")
 
-# --- GUARDADO FINAL ---
+# Guardado Final
 nombre_archivo = f"vuelo_sesion_{SESSION_ID}.json"
 ruta_completa = os.path.join(dir_vuelos, nombre_archivo)
-ruta_log = os.path.join(dir_script, "debug_error.log") # Archivo para ver errores
 
-try:
-    print(f"Guardando {len(ruta_vuelo)} puntos en {ruta_completa}")
-    
-    # Si no hay puntos, guardamos al menos una lista vacía [] para que no pese 0KB
-    if not ruta_vuelo:
-        with open(ruta_log, "a") as log:
-            log.write(f"Sesion {SESSION_ID}: ALERTA - 0 datos recibidos de X-Plane.\n")
-            
-    with open(ruta_completa, "w") as f:
-        json.dump(ruta_vuelo, f)
-        
-except Exception as e:
-    # Si falla, escribimos el error en un archivo de texto para que puedas leerlo
-    with open(ruta_log, "a") as log:
-        log.write(f"Sesion {SESSION_ID}: Error al guardar JSON: {str(e)}\n")
+with open(ruta_completa, "w") as f:
+    json.dump(ruta_vuelo, f)
+
+print(f"Guardado: {nombre_archivo} ({len(ruta_vuelo)} puntos)")
