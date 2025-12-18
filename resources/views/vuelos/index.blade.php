@@ -3,6 +3,30 @@
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('✈️ Historial de Vuelos (Telemetría)') }}
         </h2>
+        
+        <style>
+            .badge-nuevo {
+                background-color: #10b981; /* Verde Esmeralda */
+                color: white;
+                font-size: 0.65rem;
+                padding: 2px 6px;
+                border-radius: 4px;
+                margin-left: 8px;
+                font-weight: bold;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                animation: pulse-green 2s infinite;
+                vertical-align: middle;
+                display: inline-block;
+                border: 1px solid #059669;
+            }
+
+            @keyframes pulse-green {
+                0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+                70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            }
+        </style>
     </x-slot>
 
     <div class="py-12">
@@ -45,11 +69,22 @@
                                             </div>
                                         </div>
                                     </td>
+                                    
                                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                        <p class="text-gray-900 whitespace-no-wrap">
-                                            {{ $vuelo['fecha'] }} hrs
-                                        </p>
+                                        <div class="flex items-center">
+                                            <p class="text-gray-900 whitespace-no-wrap">
+                                                {{ $vuelo['fecha'] }} hrs
+                                            </p>
+                                            
+                                            {{-- LÓGICA DE ETIQUETA NUEVO --}}
+                                            @if(isset($archivoMasReciente) && $vuelo['archivo'] == $archivoMasReciente)
+                                                <span class="badge-nuevo">
+                                                    ¡NUEVO!
+                                                </span>
+                                            @endif
+                                        </div>
                                     </td>
+
                                     <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                                         <p class="text-gray-600 whitespace-no-wrap text-xs font-mono">{{ $vuelo['archivo'] }}</p>
                                     </td>
@@ -59,8 +94,8 @@
                                             <span class="relative">{{ $vuelo['size'] }}</span>
                                         </span>
                                     </td>
-                                    <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center ">
-                                        <a href="{{ route('vuelos.show', $vuelo['archivo']) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-600 hover:bg-blue-600 hover:text-white focus:outline-none transition ease-in-out duration-150">
+                                    <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                                        <a href="{{ route('vuelos.show', $vuelo['archivo']) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition ease-in-out duration-150">
                                             Ver Mapa 🗺️
                                         </a>
                                     </td>
