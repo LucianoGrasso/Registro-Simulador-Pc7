@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
-use App\Models\Sesion; // <--- AGREGADO: Importante para buscar los datos del alumno
+use App\Models\Sesion;
 
 class VueloController extends Controller
 {
@@ -37,7 +37,10 @@ class VueloController extends Controller
             $filename = $file->getFilename();
             if ($file->getExtension() !== 'json') continue;
 
-            // Usar Regex para extraer fecha y hora de manera más robusta (Case insensitive)
+            $timestamp = 0;
+            $fechaBonita = 'Desconocida';
+
+            // --- ESTRATEGIA 1: INTENTAR EXTRAER FECHA DEL NOMBRE (vuelo_YYYYMMDD_HHMMSS.json) ---
             if (preg_match('/vuelo_(\d{8})_(\d{6})/i', $filename, $matches)) {
                 try {
                     $fechaStr = $matches[1] . $matches[2];
@@ -45,16 +48,14 @@ class VueloController extends Controller
                     $fechaBonita = $fechaObj->format('d/m/Y H:i');
                     $timestamp = $fechaObj->timestamp;
                 } catch (\Exception $e) {
-                    $fechaBonita = 'Fecha inválida';
-                    $timestamp = 0;
+                    // Si falla el formato, pasamos a la estrategia 2
                 }
-            } else {
-                // Fallback si el nombre no cumple el formato
-                $fechaBonita = 'Sin fecha';
+            } 
+            
+            // --- ESTRATEGIA 2: SI NO HAY FECHA EN EL NOMBRE, USAR LA DEL ARCHIVO FÍSICO ---
+            if ($timestamp === 0) {
                 $timestamp = $file->getMTime();
-                
-                // DEBUG: Guardar nombres que fallan para investigar
-                // File::append(public_path('debug_vuelos.txt'), $filename . "\n");
+                $fechaBonita = Carbon::createFromTimestamp($timestamp)->format('d/m/Y H:i');
             }
 
             // Buscar si hay sesión asociada
@@ -63,6 +64,9 @@ class VueloController extends Controller
             
             if ($sesion && $sesion->alumno) {
                 $alumno = $sesion->alumno->nombre_completo;
+                // Opcional: Si encontramos la sesión, podemos usar la fecha real de la sesión en vez del archivo
+                // $timestamp = $sesion->hora_inicio->timestamp; 
+                // $fechaBonita = $sesion->hora_inicio->format('d/m/Y H:i');
             }
 
             $vuelos[] = [
@@ -74,11 +78,17 @@ class VueloController extends Controller
             ];
         }
 
+        // 3. ORDENAR: El más reciente primero (Timestamp mayor va primero)
         usort($vuelos, function ($a, $b) {
             return $b['timestamp'] <=> $a['timestamp'];
         });
 
-        return view('vuelos.index', compact('vuelos'));
+        // --- NUEVO: Capturamos el nombre del archivo más reciente ---
+        // Como ya ordenamos, el índice 0 es el más nuevo.
+        $archivoMasReciente = !empty($vuelos) ? $vuelos[0]['archivo'] : null;
+
+        // Pasamos esa variable extra a la vista
+        return view('vuelos.index', compact('vuelos', 'archivoMasReciente'));
     }
 
     // Ver mapa (MODIFICADO para conectar con la Base de Datos)
@@ -90,14 +100,11 @@ class VueloController extends Controller
         }
 
         // 2. BUSCAMOS LA SESIÓN EN LA BASE DE DATOS
-        // Esto busca qué sesión tiene guardado este nombre de archivo
-        // y trae también los datos del alumno asociado.
         $sesion = Sesion::where('archivo_vuelo', $archivo)
                         ->with('alumno') 
                         ->first();
 
         // 3. Enviamos todo a la vista
-        // Si encontró la sesión, $sesion tendrá datos. Si no (archivo viejo), será null.
         return view('vuelos.show', [
             'archivoJson' => $archivo,
             'sesion' => $sesion 
