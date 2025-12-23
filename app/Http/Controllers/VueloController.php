@@ -6,11 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
 use App\Models\Sesion;
+// Importante para la paginación manual de arrays
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class VueloController extends Controller
 {
-    // Listado de archivos
-    public function index()
+    // Listado de archivos con Filtros y Paginación
+    public function index(Request $request)
     {
         $path = public_path('vuelos');
         
@@ -39,72 +41,120 @@ class VueloController extends Controller
 
             $timestamp = 0;
             $fechaBonita = 'Desconocida';
+            $fechaObjeto = null; // Necesario para filtrar por rango de fechas
 
-            // --- ESTRATEGIA 1: INTENTAR EXTRAER FECHA DEL NOMBRE (vuelo_YYYYMMDD_HHMMSS.json) ---
+            // --- ESTRATEGIA 1: EXTRAER FECHA DEL NOMBRE ---
             if (preg_match('/vuelo_(\d{8})_(\d{6})/i', $filename, $matches)) {
                 try {
-                    $fechaStr = $parts[1] . $parts[2];
-                    $fechaObj = Carbon::createFromFormat('YmdHis', $fechaStr);
-                    $fechaBonita = $fechaObj->format('d/m/Y H:i');
-                    $timestamp = $fechaObj->timestamp;
+                    // CORRECCIÓN: Usamos $matches, no $parts
+                    $fechaStr = $matches[1] . $matches[2];
+                    $fechaObjeto = Carbon::createFromFormat('YmdHis', $fechaStr);
                 } catch (\Exception $e) {
-                    // Si falla el formato, pasamos a la estrategia 2
+                    // Si falla, quedará null y pasará a estrategia 2
                 }
             } 
             
-            // --- ESTRATEGIA 2: SI NO HAY FECHA EN EL NOMBRE, USAR LA DEL ARCHIVO FÍSICO ---
-            if ($timestamp === 0) {
+            // --- ESTRATEGIA 2: FECHA DEL ARCHIVO FÍSICO ---
+            if (!$fechaObjeto) {
                 $timestamp = $file->getMTime();
-                $fechaBonita = Carbon::createFromTimestamp($timestamp)->format('d/m/Y H:i');
+                $fechaObjeto = Carbon::createFromTimestamp($timestamp);
             }
 
-            // Buscar si hay sesión asociada
+            // Formateamos los datos finales
+            $timestamp = $fechaObjeto->timestamp;
+            $fechaBonita = $fechaObjeto->format('d/m/Y H:i');
+
+            // Buscar datos del alumno
             $alumno = 'Sin Asignar';
+            $npi = ''; // Agregamos NPI para el buscador
+            
             $sesion = $sesiones->get($filename);
             
             if ($sesion && $sesion->alumno) {
                 $alumno = $sesion->alumno->nombre_completo;
-                // Opcional: Si encontramos la sesión, podemos usar la fecha real de la sesión en vez del archivo
-                // $timestamp = $sesion->hora_inicio->timestamp; 
-                // $fechaBonita = $sesion->hora_inicio->format('d/m/Y H:i');
+                $npi = $sesion->alumno->npi;
             }
 
             $vuelos[] = [
                 'archivo' => $filename,
-                'fecha' => $fechaBonita,
+                'fecha_texto' => $fechaBonita,
+                'fecha_obj' => $fechaObjeto,
                 'timestamp' => $timestamp,
-                'size' => number_format($file->getSize() / 1048576, 2) . ' MB', // Convertir a MB
-                'alumno' => $alumno
+                'size' => number_format($file->getSize() / 1048576, 2) . ' MB',
+                'alumno' => $alumno,
+                'npi' => $npi
             ];
         }
 
-        // 3. ORDENAR: El más reciente primero (Timestamp mayor va primero)
-        usort($vuelos, function ($a, $b) {
-            return $b['timestamp'] <=> $a['timestamp'];
-        });
+        // --- 3. FILTRADO ---
+        $vuelosCollection = collect($vuelos);
 
-        // --- NUEVO: Capturamos el nombre del archivo más reciente ---
-        // Como ya ordenamos, el índice 0 es el más nuevo.
-        $archivoMasReciente = !empty($vuelos) ? $vuelos[0]['archivo'] : null;
+        // A. Filtro por Buscador (Texto)
+        if ($request->filled('search')) {
+            $search = strtolower($request->search);
+            $vuelosCollection = $vuelosCollection->filter(function ($vuelo) use ($search) {
+                return str_contains(strtolower($vuelo['alumno']), $search) ||
+                       str_contains(strtolower($vuelo['npi']), $search) ||
+                       str_contains(strtolower($vuelo['archivo']), $search);
+            });
+        }
 
-        // Pasamos esa variable extra a la vista
+        // B. Filtro por Fecha Inicio
+        if ($request->filled('fecha_inicio')) {
+            $inicio = Carbon::parse($request->fecha_inicio)->startOfDay();
+            $vuelosCollection = $vuelosCollection->filter(function ($vuelo) use ($inicio) {
+                return $vuelo['fecha_obj'] && $vuelo['fecha_obj']->gte($inicio);
+            });
+        }
+
+        // C. Filtro por Fecha Fin
+        if ($request->filled('fecha_fin')) {
+            $fin = Carbon::parse($request->fecha_fin)->endOfDay();
+            $vuelosCollection = $vuelosCollection->filter(function ($vuelo) use ($fin) {
+                return $vuelo['fecha_obj'] && $vuelo['fecha_obj']->lte($fin);
+            });
+        }
+
+        // Ordenamos: El más reciente primero
+        $vuelosAll = $vuelosCollection->sortByDesc('timestamp')->values()->all();
+
+        // Capturamos el más reciente (del total filtrado) para la etiqueta "NUEVO"
+        $archivoMasReciente = !empty($vuelosAll) ? $vuelosAll[0]['archivo'] : null;
+
+
+        // --- 4. PAGINACIÓN MANUAL ---
+        $perPage = 10; // Cantidad de vuelos por página
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        
+        // Cortamos el array para obtener solo los items de esta página
+        $currentItems = array_slice($vuelosAll, ($currentPage - 1) * $perPage, $perPage);
+
+        // Creamos el objeto paginador
+        $vuelos = new LengthAwarePaginator(
+            $currentItems, 
+            count($vuelosAll), // Total de items
+            $perPage, 
+            $currentPage, 
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'query' => $request->query() // Mantiene los filtros en los links de paginación
+            ]
+        );
+
         return view('vuelos.index', compact('vuelos', 'archivoMasReciente'));
     }
 
-    // Ver mapa (MODIFICADO para conectar con la Base de Datos)
+    // Ver mapa
     public function show($archivo)
     {
-        // 1. Verificamos que el archivo físico exista
         if (!file_exists(public_path('vuelos/' . $archivo))) {
             abort(404, 'El archivo de vuelo no existe en el disco.');
         }
 
-        // 2. BUSCAMOS LA SESIÓN EN LA BASE DE DATOS
         $sesion = Sesion::where('archivo_vuelo', $archivo)
                         ->with('alumno') 
                         ->first();
 
-        // 3. Enviamos todo a la vista
         return view('vuelos.show', [
             'archivoJson' => $archivo,
             'sesion' => $sesion 
