@@ -119,7 +119,7 @@
                                        value="{{ old('npi', $alumno->npi) }}"
                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono @error('npi') border-red-500 @enderror"
                                        placeholder="1234567-8"
-                                       pattern="[0-9]{7}-[0-9]{1}"
+                                       pattern="[0-9]{6,7}-[0-9]{1,kK}"
                                        style="color: #000 !important; background: #fff !important;"
                                        required>
                                 <p class="mt-1 text-xs text-gray-500">
@@ -210,24 +210,33 @@
                 e.target.value = value;
             });
 
-            // Formatear NPI mientras se escribe
+            // --- CORRECCIÓN AQUÍ ---
+            // Formatear NPI mientras se escribe (Flexible para 6 o 7 dígitos)
             const npiInput = document.getElementById('npi');
+            
             npiInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/[^\d]/g, '');
-                if (value.length > 7) {
-                    value = value.slice(0, 7) + '-' + value.slice(7, 8);
+                // 1. Limpiamos todo lo que no sea número o K
+                let value = e.target.value.replace(/[^0-9kK]/g, '');
+                
+                // 2. Si hay más de un dígito, ponemos el guion antes del último
+                if (value.length > 1) {
+                    const cuerpo = value.slice(0, -1);
+                    const dv = value.slice(-1);
+                    e.target.value = cuerpo + '-' + dv;
+                } else {
+                    e.target.value = value;
                 }
-                e.target.value = value;
             });
 
             // Validar antes de enviar
             document.querySelector('form').addEventListener('submit', function(e) {
                 const npi = npiInput.value;
-                const npiPattern = /^[0-9]{7}-[0-9]{1}$/;
+                // Expresión regular: Acepta 6 o 7 dígitos + guion + 1 dígito (o K)
+                const npiPattern = /^[0-9]{6,7}-[0-9kK]{1}$/;
                 
                 if (!npiPattern.test(npi)) {
                     e.preventDefault();
-                    alert('El NPI debe tener el formato correcto: 1234567-8');
+                    alert('El NPI debe tener el formato correcto (Ej: 1421-5 o 001421-5)');
                     npiInput.focus();
                     return false;
                 }
