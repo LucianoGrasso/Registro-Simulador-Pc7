@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ asset('leaflet/leaflet.css') }}" />
     <script src="{{ asset('leaflet/leaflet.js') }}"></script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         body { margin: 0; padding: 0; background-color: #0f172a; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
