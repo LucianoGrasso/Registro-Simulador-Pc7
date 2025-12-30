@@ -193,7 +193,7 @@
                 lon: parseFloat(p.lon || p.longitude || 0),
                 alt: Math.round(parseFloat(p.alt || p.altitude || p.elevation || 0)),
                 hdg: Math.round(parseFloat(p.heading || p.hdg || p.mag_psi || 0)),
-                spd: Math.round(parseFloat(p.speed || p.gs || p.ias || 0))
+                spd: Math.round(parseFloat(p.spd || p.speed || p.gs || p.ias || 0))
             })).filter(p => p.lat !== 0 && p.lon !== 0);
 
             let maxAlt = 0;
