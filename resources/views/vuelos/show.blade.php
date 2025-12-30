@@ -122,10 +122,10 @@
                 </button>
                 
                 <select id="speedBtn" class="bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded px-3 py-1 pr-8 min-w-[100px] focus:outline-none cursor-pointer hover:bg-gray-100 appearance-none">
-                    <option value="200">0.5x (Lento)</option>
-                    <option value="100" selected>1x (Normal)</option>
-                    <option value="50">2x (Rápido)</option>
-                    <option value="10">10x (Turbo)</option>
+                    <option value="2000">0.5x (Lento)</option>
+                    <option value="1000" selected>1x (Normal)</option>
+                    <option value="500">2x (Rápido)</option>
+                    <option value="100">10x (Turbo)</option>
                 </select>
             </div>
 
@@ -192,7 +192,7 @@
                 lat: parseFloat(p.lat || p.latitude || 0),
                 lon: parseFloat(p.lon || p.longitude || 0),
                 alt: Math.round(parseFloat(p.alt || p.altitude || p.elevation || 0)),
-                hdg: Math.round(parseFloat(p.heading || p.hdg || p.mag_psi || 0)),
+                hdg: Math.round(parseFloat(p.hdg || p.heading || p.mag_psi || 0)),
                 spd: Math.round(parseFloat(p.spd || p.speed || p.gs || p.ias || 0))
             })).filter(p => p.lat !== 0 && p.lon !== 0);
 
@@ -261,7 +261,9 @@
             let currentIndex = 0;
             let isPlaying = false;
             let playInterval;
-            let speedMs = 100;
+            
+            // --- CORRECCIÓN FINAL: 1000ms por defecto (1 segundo) ---
+            let speedMs = 1000;
             
             const slider = document.getElementById('timeSlider');
             const elAlt = document.getElementById('liveAlt');
@@ -273,8 +275,6 @@
 
             slider.max = totalPoints - 1;
 
-            // --- FUNCIÓN DE TIEMPO CORREGIDA PARA HORAS ---
-            // Usamos .substr(11, 8) para tomar HH:MM:SS
             const formatTime = (sec) => new Date(sec * 1000).toISOString().substr(11, 8);
             
             document.getElementById('totalTime').innerText = formatTime(totalPoints);
