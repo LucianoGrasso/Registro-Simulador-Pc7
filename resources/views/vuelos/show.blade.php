@@ -14,7 +14,6 @@
         body { margin: 0; padding: 0; background-color: #0f172a; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100%; z-index: 1; }
         
-        /* PANELES (Sin cambios, solo ocultamos scrollbars por si acaso) */
         .info-panel {
             position: absolute; bottom: 20px; left: 20px; z-index: 2000; 
             background: rgba(255, 255, 255, 0.95); padding: 20px; 
@@ -49,13 +48,9 @@
             width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px;
         }
         
-        /* --- AQUÍ ESTÁ LA MAGIA DEL AVIÓN --- */
         #planeImg {
-            /* Sombra fuerte para efecto 3D sobre el mapa */
             filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.6));
-            /* Transición suave para rotación y cambio de tamaño */
             transition: transform 0.1s linear, width 0.3s ease, height 0.3s ease;
-            /* Renderizado nítido */
             image-rendering: -webkit-optimize-contrast;
         }
     </style>
@@ -110,9 +105,11 @@
 
     <div class="control-panel font-sans">
         <div class="mb-2 flex items-center gap-4">
-            <span class="text-xs text-gray-500 font-mono w-12" id="currentTime">00:00</span>
+            <span class="text-xs text-gray-500 font-mono w-20 text-right" id="currentTime">00:00:00</span>
+            
             <input type="range" id="timeSlider" min="0" max="100" value="0" step="1">
-            <span class="text-xs text-gray-500 font-mono w-12" id="totalTime">--:--</span>
+            
+            <span class="text-xs text-gray-500 font-mono w-20" id="totalTime">--:--:--</span>
         </div>
 
         <div class="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -124,11 +121,11 @@
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                 </button>
                 
-                <select id="speedBtn" class="bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded px-2 py-1 focus:outline-none cursor-pointer hover:bg-gray-100">
-                    <option value="200">0.5x</option>
-                    <option value="100" selected>1x</option>
-                    <option value="50">2x</option>
-                    <option value="10">10x</option>
+                <select id="speedBtn" class="bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded px-3 py-1 pr-8 min-w-[100px] focus:outline-none cursor-pointer hover:bg-gray-100 appearance-none">
+                    <option value="200">0.5x (Lento)</option>
+                    <option value="100" selected>1x (Normal)</option>
+                    <option value="50">2x (Rápido)</option>
+                    <option value="10">10x (Turbo)</option>
                 </select>
             </div>
 
@@ -240,32 +237,23 @@
                 map.fitBounds(L.polyline(allCoords).getBounds(), {padding: [50, 50]});
             }
 
-            // --- CONFIGURACIÓN DEL AVIÓN GRANDE ---
-            const baseIconSize = 64; // Tamaño Base Grande (antes 40)
+            const baseIconSize = 64; 
             
             const planeIcon = L.divIcon({
                 className: 'plane-icon-container',
-                // Icono más grande y centrado
                 html: `<img src="/images/VueloPC7.png" id="planeImg" style="width: ${baseIconSize}px; height: ${baseIconSize}px; display:block;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/7893/7893979.png'">`,
                 iconSize: [baseIconSize, baseIconSize],
                 iconAnchor: [baseIconSize/2, baseIconSize/2]
             });
             const planeMarker = L.marker([startPoint.lat, startPoint.lon], {icon: planeIcon, zIndexOffset: 2000}).addTo(map);
 
-            // --- LÓGICA DE ZOOM DINÁMICO ---
-            // Escuchamos cuando el usuario hace zoom
             map.on('zoomend', function() {
                 var currentZoom = map.getZoom();
                 var img = document.getElementById('planeImg');
                 if(img) {
-                    // Calculamos una escala: A más zoom, el avión se ve un poco más grande
-                    // Zoom 14 es el "normal" (escala 1)
                     var scale = 1 + (currentZoom - 14) * 0.2; 
-                    // Limitamos para que no sea ni microscópico ni gigante
                     scale = Math.max(0.5, Math.min(2.5, scale));
-                    
-                    // Aplicamos el tamaño sin perder la rotación (se aplica en updateFrame)
-                    img.dataset.scale = scale; // Guardamos la escala para usarla al rotar
+                    img.dataset.scale = scale; 
                 }
             });
 
@@ -284,7 +272,11 @@
             const btnPause = document.getElementById('btnPause');
 
             slider.max = totalPoints - 1;
-            const formatTime = (sec) => new Date(sec * 1000).toISOString().substr(14, 5);
+
+            // --- FUNCIÓN DE TIEMPO CORREGIDA PARA HORAS ---
+            // Usamos .substr(11, 8) para tomar HH:MM:SS
+            const formatTime = (sec) => new Date(sec * 1000).toISOString().substr(11, 8);
+            
             document.getElementById('totalTime').innerText = formatTime(totalPoints);
 
             function updateFrame(index) {
@@ -295,9 +287,7 @@
                 
                 const img = document.getElementById('planeImg');
                 if(img) {
-                    // Recuperamos la escala del zoom (o 1 por defecto)
                     const currentScale = img.dataset.scale || 1;
-                    // Aplicamos Rotación + Escala de Zoom
                     img.style.transform = `rotate(${data.hdg}deg) scale(${currentScale})`;
                 }
 

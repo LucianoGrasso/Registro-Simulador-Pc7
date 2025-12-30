@@ -37,6 +37,10 @@ sock.settimeout(1.0) # Timeout de 1 seg para revisar el archivo STOP
 ruta_vuelo = []
 ultimo_tiempo = 0
 
+# Variables para mantener el estado actual de los instrumentos
+ultimo_spd = 0.0
+ultimo_hdg = 0.0
+
 try:
     while True:
         # A. Revisar Señal de STOP
@@ -50,26 +54,47 @@ try:
         try:
             data, addr = sock.recvfrom(1024)
             
-            # Filtro de tiempo: Guardar máximo 1 punto por segundo para no saturar
-            tiempo_actual = time.time()
-            if tiempo_actual - ultimo_tiempo < 1.0:
-                continue
-
+            # Procesamos el paquete X-Plane
             if data[0:4] == b'DATA':
                 longitud = len(data)
+                
+                # Recorremos todos los bloques dentro del paquete
                 for i in range(5, longitud, 36):
                     if i + 36 > longitud: break
-                    bloque_id = struct.unpack('<i', data[i:i+4])[0]
                     
-                    if bloque_id == 20: # Fila 20
-                        valores = struct.unpack('<8f', data[i+4:i+36])
+                    bloque_id = struct.unpack('<i', data[i:i+4])[0]
+                    valores = struct.unpack('<8f', data[i+4:i+36])
+
+                    # --- CAPTURA DE DATOS ---
+                    
+                    # Bloque 3: Velocidades
+                    if bloque_id == 3:
+                        # Index 0 suele ser V-ind (KIAS)
+                        ultimo_spd = valores[0]
+
+                    # Bloque 17: Pitch, Roll, Headings
+                    elif bloque_id == 17:
+                        # Index 3 es el Rumbo Magnético (mag psi)
+                        ultimo_hdg = valores[3]
+
+                    # Bloque 20: Latitud, Longitud, Altitud
+                    elif bloque_id == 20:
                         lat, lon, alt = valores[0], valores[1], valores[2]
                         
-                        ruta_vuelo.append({
-                            "lat": lat, "lon": lon, "alt": alt, "ts": tiempo_actual
-                        })
-                        ultimo_tiempo = tiempo_actual
-                        
+                        # --- GUARDADO TEMPORAL (Solo 1 vez por segundo) ---
+                        tiempo_actual = time.time()
+                        if tiempo_actual - ultimo_tiempo >= 1.0:
+                            # Guardamos el punto con la info combinada de los otros bloques
+                            ruta_vuelo.append({
+                                "lat": lat, 
+                                "lon": lon, 
+                                "alt": alt, 
+                                "spd": ultimo_spd, # Agregado
+                                "hdg": ultimo_hdg, # Agregado
+                                "ts": tiempo_actual
+                            })
+                            ultimo_tiempo = tiempo_actual
+
         except socket.timeout:
             continue
 
