@@ -38,9 +38,9 @@
                     <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
                         <!-- Logo y nombre del sistema -->
                         <div class="flex items-center space-x-3">
-                            <img src="{{ asset('images/LogoPC7.png') }}" 
+                            <img src="{{ asset('images/VueloPC7.png') }}" 
                                  alt="PC-7" 
-                                 class="w-12 h-12 object-contain">
+                                 class="w-20 h-16 object-contain">
                             <div>
                                 <p class="text-white font-semibold text-sm">Sistema de Registro Simulador PC-7</p>
                                 <p class="text-gray-400 text-xs">Armada de Chile</p>

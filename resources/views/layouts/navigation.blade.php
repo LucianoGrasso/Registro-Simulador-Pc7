@@ -7,7 +7,7 @@
                 <div class="shrink-0 flex items-center group cursor-pointer pl-0 pr-3" style="min-width: 320px;">
                     <div class="relative">
                         <!-- Logo PC-7 -->
-                        <img src="{{ asset('images/logopc7.png') }}" 
+                        <img src="{{ asset('images/LogoPC7.png') }}" 
                              alt="Simulador PC-7" 
                              class="relative w-26 h-20 object-contain animate-bounce-slow">
                     </div>
