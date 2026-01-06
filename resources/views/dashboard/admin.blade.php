@@ -88,9 +88,7 @@
                         @endphp
 
                         <div class="text-center">
-                            <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl">
-                                👨‍✈️
-                            </div>
+                            
                             <h4 class="text-lg font-bold text-gray-900">{{ $ultimoVuelo->alumno->nombre_completo }}</h4>
                             <p class="text-sm text-gray-500 mb-1">NPI: {{ $ultimoVuelo->alumno->npi }}</p>
                             <p class="text-xs text-gray-400 mb-4">{{ $ultimoVuelo->fecha->format('d M Y') }} • {{ $ultimoVuelo->hora_inicio->format('H:i') }}</p>
