@@ -124,27 +124,26 @@
 
                 <div class="bg-white shadow-md rounded-lg p-6 lg:col-span-2 flex flex-col h-full">
                     
-                    <div class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end">
-                        <h3 class="text-lg font-bold text-gray-800">📊 Actividad Semanal</h3>
+                    <div class="mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-end">
+                        <h3 class="text-lg font-bold text-gray-800">📊 Rendimiento Semanal</h3>
                         
-                        <div class="flex items-center gap-4 mt-2 sm:mt-0">
-                            <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-4 mt-2 sm:mt-0 bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                            <div class="flex items-center gap-2">
                                 <span class="w-3 h-3 bg-blue-600 rounded-sm"></span>
-                                <span class="text-xs text-gray-500 font-bold">Sesiones</span>
+                                <span class="text-xs text-gray-600 font-bold uppercase">Sesiones</span>
                             </div>
-                            <div class="flex items-center gap-1.5">
+                            <div class="flex items-center gap-2">
                                 <span class="w-3 h-3 bg-emerald-500 rounded-sm"></span>
-                                <span class="text-xs text-gray-500 font-bold">Horas</span>
+                                <span class="text-xs text-gray-600 font-bold uppercase">Horas</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="flex items-end justify-between gap-2 mt-auto w-full" style="height: 260px;">
+                    <div class="flex items-end justify-between gap-2 mt-auto w-full" style="height: 280px;">
                         
                         @php
-                            // 1. Calcular Máximos para las escalas independientes
                             $collection = collect($estadisticasSemana);
-                            $maxSesiones = $collection->max('sesiones') ?: 1; // Evitar división por 0
+                            $maxSesiones = $collection->max('sesiones') ?: 1;
                             $maxMinutos = $collection->max('minutos') ?: 1;
                         @endphp
 
@@ -153,7 +152,7 @@
                                 // Datos Sesiones
                                 $cantSesiones = $dia['sesiones'];
                                 $pctSesiones = ($cantSesiones / $maxSesiones) * 100;
-                                $alturaSesion = $cantSesiones == 0 ? 2 : $pctSesiones; // Mínimo 2% visual
+                                $alturaSesion = $cantSesiones == 0 ? 2 : $pctSesiones;
 
                                 // Datos Horas
                                 $minutos = $dia['minutos'];
@@ -164,40 +163,40 @@
                             
                             <div class="flex flex-col items-center w-full h-full justify-end group cursor-pointer relative">
                                 
-                                <div class="mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-xs rounded py-1.5 px-3 absolute top-0 z-20 whitespace-nowrap shadow-xl pointer-events-none transform -translate-y-full text-center border border-gray-700">
-                                    <div class="font-bold text-blue-200">{{ $cantSesiones }} Sesiones</div>
-                                    <div class="font-bold text-emerald-200">{{ $horas }} Horas</div>
+                                <div class="mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-900 text-white text-xs rounded py-2 px-3 absolute top-0 z-20 whitespace-nowrap shadow-xl pointer-events-none transform -translate-y-full text-center border border-gray-700">
+                                    <div class="font-bold text-blue-200 text-sm">{{ $cantSesiones }} Vuelos</div>
+                                    <div class="font-bold text-emerald-200 text-sm">{{ $horas }} Horas</div>
                                 </div>
 
-                                <div class="flex items-end justify-center gap-1 w-full max-w-[50px] bg-gray-50 rounded-lg pb-0 hover:bg-gray-100 transition-colors" style="height: 200px;">
+                                <div class="flex items-end justify-center gap-1 w-full max-w-[60px] bg-gray-50 rounded-lg pb-0 border-b border-gray-200 hover:bg-gray-100 transition-colors" style="height: 220px;">
                                     
                                     <div class="relative w-1/2 flex flex-col items-center justify-end h-full">
-                                        <div class="mb-1 text-[10px] font-bold text-blue-600 {{ $cantSesiones > 0 ? 'opacity-100' : 'opacity-0' }}">
+                                        <div class="mb-1 text-base sm:text-lg font-black text-blue-800 {{ $cantSesiones > 0 ? 'opacity-100' : 'opacity-0' }}">
                                             {{ $cantSesiones }}
                                         </div>
                                         <div style="height: {{ $alturaSesion }}%;" 
                                              class="w-full rounded-t-sm transition-all duration-700 ease-out 
-                                             {{ $cantSesiones > 0 ? 'bg-blue-600 shadow-sm' : 'bg-blue-100' }}">
+                                             {{ $cantSesiones > 0 ? 'bg-blue-600 shadow-md' : 'bg-blue-100/50' }}">
                                         </div>
                                     </div>
 
                                     <div class="relative w-1/2 flex flex-col items-center justify-end h-full">
-                                        <div class="mb-1 text-[9px] font-bold text-emerald-600 {{ $horas > 0 ? 'opacity-100' : 'opacity-0' }}">
+                                        <div class="mb-1 text-xs sm:text-sm font-extrabold text-emerald-700 {{ $horas > 0 ? 'opacity-100' : 'opacity-0' }}">
                                             {{ $horas }}h
                                         </div>
                                         <div style="height: {{ $alturaHoras }}%;" 
                                              class="w-full rounded-t-sm transition-all duration-700 ease-out 
-                                             {{ $minutos > 0 ? 'bg-emerald-500 shadow-sm' : 'bg-emerald-100' }}">
+                                             {{ $minutos > 0 ? 'bg-emerald-500 shadow-sm' : 'bg-emerald-100/50' }}">
                                         </div>
                                     </div>
 
                                 </div>
                                 
                                 <div class="mt-3 text-center">
-                                    <div class="text-[10px] font-bold uppercase text-gray-600">
+                                    <div class="text-[12px] font-black uppercase text-gray-700">
                                         {{ ucfirst(\Carbon\Carbon::createFromFormat('d/m', $dia['fecha'])->locale('es')->isoFormat('ddd')) }}
                                     </div>
-                                    <div class="text-[9px] text-gray-400 font-mono mt-0.5">{{ $dia['fecha'] }}</div>
+                                    <div class="text-[10px] text-gray-500 font-bold mt-0.5">{{ $dia['fecha'] }}</div>
                                 </div>
                             </div>
                         @endforeach
