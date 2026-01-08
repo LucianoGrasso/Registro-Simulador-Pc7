@@ -2,7 +2,8 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                {{ __('🗺️ Análisis de Vuelo: ') . $sesion->alumno->nombre_completo }}
+                {{-- Título Seguro --}}
+                {{ __('🗺️ Análisis de Vuelo: ') . ($sesion->alumno->nombre_completo ?? 'Archivo Externo') }}
             </h2>
             <span class="text-sm text-gray-500 dark:text-gray-400 font-mono">{{ $archivoNombre }}</span>
         </div>
@@ -38,17 +39,24 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                 
-                <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border dark:border-gray-700 h-[500px] relative transition-colors">
-                    <div id="map" class="w-full h-full z-0"></div>
+                <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border dark:border-gray-700 relative transition-colors" style="height: 500px;">
+                    <div id="map" style="width: 100%; height: 100%; z-index: 1;"></div>
+                    
+                    <div class="absolute bottom-6 right-4 z-[400] bg-white/90 dark:bg-gray-800/90 p-3 rounded-lg shadow-md border border-gray-300 dark:border-gray-600 backdrop-blur-sm">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Altitud (MSL)</div>
+                            <div class="w-32 h-3 rounded-full" style="background: linear-gradient(to right, hsl(0, 70%, 45%), hsl(60, 70%, 45%), hsl(120, 70%, 45%));"></div>
+                            <div class="flex justify-between w-full text-[11px] font-mono font-bold text-gray-600 dark:text-gray-400 mt-1">
+                                <span id="legend-min">0 ft</span> <span id="legend-max">0 ft</span> </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="lg:col-span-1 flex flex-col gap-4">
-                    
                     <div class="bg-gray-800 text-white rounded-lg shadow-lg p-5 border border-gray-700 h-full">
                         <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-600 pb-2">
                             Telemetría en Vivo
                         </h4>
-
                         <div class="grid grid-cols-2 gap-4 mb-6">
                             <div class="text-center">
                                 <div class="text-xs text-gray-400">SPD (Kts)</div>
@@ -59,7 +67,6 @@
                                 <div class="text-3xl font-mono font-bold text-green-400" id="live-alt">0</div>
                             </div>
                         </div>
-
                         <div class="mb-6 text-center bg-gray-900 rounded p-2">
                             <div class="text-xs text-gray-400 mb-1">RUMBO (HDG)</div>
                             <div class="text-2xl font-mono font-bold text-yellow-400 flex justify-center items-center gap-2">
@@ -67,21 +74,19 @@
                                 <span id="live-hdg">000</span>°
                             </div>
                         </div>
-
                         <div class="space-y-4">
                             <div>
                                 <div class="flex justify-between items-center mb-1">
-                                    <span class="text-xs text-gray-300">PITCH (Nariz)</span>
+                                    <span class="text-xs text-gray-300">PITCH</span>
                                     <span class="font-mono font-bold text-blue-300" id="live-pitch">0.0°</span>
                                 </div>
                                 <div class="w-full bg-gray-600 h-1.5 rounded-full overflow-hidden relative">
                                     <div id="bar-pitch" class="absolute top-0 bottom-0 w-1 bg-blue-400 transition-all duration-100" style="left: 50%;"></div>
                                 </div>
                             </div>
-
                             <div>
                                 <div class="flex justify-between items-center mb-1">
-                                    <span class="text-xs text-gray-300">ROLL (Alabeo)</span>
+                                    <span class="text-xs text-gray-300">ROLL</span>
                                     <span class="font-mono font-bold text-blue-300" id="live-roll">0.0°</span>
                                 </div>
                                 <div class="w-full bg-gray-600 h-1.5 rounded-full overflow-hidden relative">
@@ -95,24 +100,18 @@
 
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border dark:border-gray-700 sticky bottom-4 z-50 transition-colors">
                 <div class="flex items-center gap-4">
-                    
                     <button id="play-btn" class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition transform hover:scale-105 focus:outline-none">
                         <span id="play-icon" class="text-sm">▶</span>
                     </button>
-
                     <div class="flex-shrink-0 w-12 text-center">
                         <span class="text-sm font-mono font-bold text-blue-600 dark:text-blue-400" id="current-time-display">00:00</span>
                     </div>
-
                     <div class="flex-1 w-full relative flex items-center">
-                        <input type="range" id="timeline" min="0" max="100" value="0" 
-                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600 hover:accent-blue-500 transition-all">
+                        <input type="range" id="timeline" min="0" max="100" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600 hover:accent-blue-500 transition-all">
                     </div>
-
                     <div class="flex-shrink-0 w-12 text-center">
                         <span class="text-sm font-mono font-bold text-gray-500 dark:text-gray-400" id="total-time-display">00:00</span>
                     </div>
-
                     <div class="flex-shrink-0 border-l border-gray-300 dark:border-gray-600 pl-4">
                         <select id="speed-select" class="bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 border-none rounded text-xs font-bold text-gray-700 dark:text-gray-200 py-1.5 px-2 cursor-pointer focus:ring-0">
                             <option value="1">1x</option>
@@ -123,12 +122,12 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    {{-- LIBRERÍAS OFFLINE --}}
+    <link rel="stylesheet" href="{{ asset('leaflet/leaflet.css') }}" />
+    <script src="{{ asset('leaflet/leaflet.js') }}"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -136,33 +135,86 @@
             const rawData = @json($flightData);
             
             if (!rawData || rawData.length === 0) {
-                alert('El archivo de vuelo está vacío o dañado.');
+                console.error("Datos de vuelo vacíos");
                 return;
             }
 
             // 2. INICIALIZAR MAPA
-            const map = L.map('map').setView([rawData[0].lat, rawData[0].lon], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
+            const map = L.map('map').setView([rawData[0].lat, rawData[0].lon], 10);
+
+            // ============================================================
+            // 🗺️ CONFIGURACIÓN OFFLINE
+            // ============================================================
+            L.tileLayer('/mapas/mapas_naval/{z}/{x}/{y}.png', {
+                minZoom: 8,
+                maxZoom: 15,
+                maxNativeZoom: 15,
+                tms: true,
+                attribution: '© PC-7 Offline Maps'
             }).addTo(map);
 
-            const latlngs = rawData.map(p => [p.lat, p.lon]);
-            const polyline = L.polyline(latlngs, {color: '#3b82f6', weight: 4}).addTo(map);
-            map.fitBounds(polyline.getBounds());
-
-            const planeIcon = L.divIcon({
-                html: '<div style="font-size: 24px; transform: rotate(0deg);" id="plane-icon">✈️</div>',
-                className: 'plane-marker',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
+            // ----------------------------------------------------------------
+            // 🎨 RASTRO DE COLORES SUAVE (Heatmap)
+            // ----------------------------------------------------------------
+            
+            // a. Encontrar Altura Mínima y Máxima para calibrar
+            let minAlt = Infinity;
+            let maxAlt = -Infinity;
+            rawData.forEach(p => {
+                if(p.alt < minAlt) minAlt = p.alt;
+                if(p.alt > maxAlt) maxAlt = p.alt;
             });
-            const marker = L.marker([rawData[0].lat, rawData[0].lon], {icon: planeIcon}).addTo(map);
 
-            // 3. VARIABLES DEL REPRODUCTOR
+            // NUEVO: Mostrar los pies reales en la leyenda
+            document.getElementById('legend-min').innerText = Math.round(minAlt) + ' ft';
+            document.getElementById('legend-max').innerText = Math.round(maxAlt) + ' ft';
+
+            // b. Función COLOR SUAVE
+            function getColor(alt) {
+                // Normalizar altura (0 a 1)
+                let pct = (alt - minAlt) / (maxAlt - minAlt || 1); 
+                
+                // HSL: 0 (Rojo) -> 120 (Verde)
+                // ANTES: Saturation 100%, Lightness 50% (Muy chillón)
+                // AHORA: Saturation 70%, Lightness 45% (Más sobrio y profesional)
+                let hue = pct * 120; 
+                return `hsl(${hue}, 70%, 45%)`; 
+            }
+
+            // c. Dibujar segmentos
+            for (let i = 0; i < rawData.length - 1; i++) {
+                const p1 = rawData[i];
+                const p2 = rawData[i+1];
+                
+                L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
+                    color: getColor(p1.alt),
+                    weight: 4,      // Línea un poco más delgada (era 5)
+                    opacity: 0.8    // Un poco de transparencia
+                }).addTo(map);
+            }
+
+            // Ajustar vista
+            const fullLine = L.polyline(rawData.map(p => [p.lat, p.lon]), {opacity: 0});
+            map.fitBounds(fullLine.getBounds(), {padding: [50, 50]});
+
+            // ----------------------------------------------------------------
+            // ✈️ MARCADOR DEL AVIÓN
+            // ----------------------------------------------------------------
+            const planeIcon = L.divIcon({
+                html: '<img src="/images/VueloPC7.png" id="plane-img" style="width: 48px; height: 48px; transform-origin: center;">',
+                className: 'plane-marker',
+                iconSize: [48, 48],
+                iconAnchor: [24, 24]
+            });
+            const marker = L.marker([rawData[0].lat, rawData[0].lon], {
+                icon: planeIcon,
+                zIndexOffset: 1000
+            }).addTo(map);
+
+            // 3. LOGICA REPRODUCTOR
             let isPlaying = false;
             let currentIndex = 0;
-            let animationId;
+            const totalSeconds = rawData.length - 1;
             
             // Elementos DOM
             const elSpd = document.getElementById('live-spd');
@@ -174,68 +226,67 @@
             const barPitch = document.getElementById('bar-pitch');
             const barRoll = document.getElementById('bar-roll');
             
-            // Nuevos elementos de tiempo
             const elCurrentTime = document.getElementById('current-time-display');
             const elTotalTime = document.getElementById('total-time-display');
-            
             const slider = document.getElementById('timeline');
             const btnPlay = document.getElementById('play-btn');
             const iconPlay = document.getElementById('play-icon');
             const selSpeed = document.getElementById('speed-select');
 
-            // Configurar Slider y Tiempo Total
-            const totalSeconds = rawData.length - 1;
             slider.max = totalSeconds;
             
-            // Función auxiliar para formatear tiempo (MM:SS)
             function formatTime(seconds) {
                 const min = Math.floor(seconds / 60).toString().padStart(2, '0');
                 const sec = (seconds % 60).toString().padStart(2, '0');
                 return `${min}:${sec}`;
             }
-
-            // Establecer tiempo total al inicio
             elTotalTime.innerText = formatTime(totalSeconds);
 
-            // 4. FUNCIÓN ACTUALIZAR PANTALLA
             function updateDisplay(index) {
+                if (!rawData[index]) return; 
                 const data = rawData[index];
 
-                // Mapa
                 marker.setLatLng([data.lat, data.lon]);
-                const planeDiv = document.getElementById('plane-icon');
-                if(planeDiv) planeDiv.style.transform = `rotate(${data.hdg - 45}deg)`;
+                
+                const planeImg = document.getElementById('plane-img');
+                if(planeImg) {
+                    planeImg.style.transform = `rotate(${data.hdg}deg)`;
+                }
 
-                // Panel Lateral
                 const speed = data.spd !== undefined ? data.spd : (data.gs || 0);
                 elSpd.innerText = Math.round(speed);
                 elAlt.innerText = Math.round(data.alt);
                 elHdg.innerText = Math.round(data.hdg).toString().padStart(3, '0');
                 elHdgIcon.style.transform = `rotate(${data.hdg}deg)`;
 
-                // Pitch & Roll
                 const pitch = data.pitch || 0;
                 const roll = data.roll || 0;
                 elPitch.innerText = pitch.toFixed(1) + '°';
                 elRoll.innerText = roll.toFixed(1) + '°';
 
-                // Barras visuales
                 let pitchPct = 50 + (pitch * 1.5); 
                 let rollPct = 50 + (roll * 1.5);
-                pitchPct = Math.max(0, Math.min(100, pitchPct));
-                rollPct = Math.max(0, Math.min(100, rollPct));
-                barPitch.style.left = pitchPct + '%';
-                barRoll.style.left = rollPct + '%';
+                barPitch.style.left = Math.max(0, Math.min(100, pitchPct)) + '%';
+                barRoll.style.left = Math.max(0, Math.min(100, rollPct)) + '%';
 
-                // NUEVO: Actualizar tiempo actual en la barra
                 elCurrentTime.innerText = formatTime(index);
-
-                // Sincronizar Slider
                 slider.value = index;
             }
 
-            // 5. LÓGICA DE REPRODUCCIÓN
+            function loop() {
+                if (!isPlaying) return;
+                if (currentIndex < totalSeconds) {
+                    currentIndex++;
+                    updateDisplay(currentIndex);
+                    let delay = 1000 / parseInt(selSpeed.value); 
+                    setTimeout(loop, delay);
+                } else {
+                    pause(); 
+                }
+            }
+
             function play() {
+                if (currentIndex >= totalSeconds) currentIndex = 0; 
                 isPlaying = true;
                 iconPlay.innerText = '⏸';
                 loop();
@@ -244,37 +295,14 @@
             function pause() {
                 isPlaying = false;
                 iconPlay.innerText = '▶';
-                cancelAnimationFrame(animationId);
             }
 
-            function loop() {
-                if (!isPlaying) return;
-
-                if (currentIndex < rawData.length - 1) {
-                    currentIndex++;
-                    updateDisplay(currentIndex);
-                    
-                    let delay = 1000 / parseInt(selSpeed.value);
-                    setTimeout(() => {
-                        requestAnimationFrame(loop);
-                    }, delay / 60);
-                } else {
-                    pause();
-                }
-            }
-
-            btnPlay.addEventListener('click', () => {
-                if (isPlaying) pause();
-                else play();
-            });
-
-            slider.addEventListener('input', (e) => {
-                pause();
-                currentIndex = parseInt(e.target.value);
-                updateDisplay(currentIndex);
-            });
+            btnPlay.addEventListener('click', () => { if (isPlaying) pause(); else play(); });
+            slider.addEventListener('input', (e) => { pause(); currentIndex = parseInt(e.target.value); updateDisplay(currentIndex); });
 
             updateDisplay(0);
+            
+            setTimeout(() => { map.invalidateSize(); }, 500);
         });
     </script>
 </x-app-layout>

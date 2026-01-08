@@ -144,46 +144,51 @@ class VueloController extends Controller
         return view('vuelos.index', compact('vuelos', 'archivoMasReciente'));
     }
 
-    // Ver mapa y Reproductor de Vuelo
     public function show($archivo)
     {
-        // 1. Construir ruta y verificar existencia
+        // 1. Validar archivo físico
         $rutaCompleta = public_path('vuelos/' . $archivo);
-
         if (!file_exists($rutaCompleta)) {
-            return redirect()->route('vuelos.index')->with('error', 'El archivo de vuelo no existe en el disco.');
+            return redirect()->route('vuelos.index')->with('error', 'Archivo no encontrado.');
         }
 
-        // 2. Leer y decodificar JSON
+        // 2. Leer JSON
         $jsonContent = file_get_contents($rutaCompleta);
         $flightData = json_decode($jsonContent, true);
 
-        // 3. CALCULAR ESTADÍSTICAS DE TELEMETRÍA 📊
+        // 3. Calcular Estadísticas (Tu código actual)
         $coleccion = collect($flightData);
-
         $stats = [
-            // Actitud (Nuevos datos del script Python)
-            'pitch_max' => $coleccion->max('pitch') ?? 0, // Nariz arriba máx
-            'pitch_min' => $coleccion->min('pitch') ?? 0, // Nariz abajo máx
-            'roll_max'  => $coleccion->max('roll') ?? 0,  // Inclinación derecha máx
-            'roll_min'  => $coleccion->min('roll') ?? 0,  // Inclinación izquierda máx
-            
-            // Desempeño
-            'alt_max'   => $coleccion->max('alt') ?? 0,   // Altitud máxima
-            'gs_max'    => $coleccion->max('spd') ?? 0,   // Velocidad máxima (Nota: Python usa 'spd')
+            'pitch_max' => $coleccion->max('pitch') ?? 0,
+            'pitch_min' => $coleccion->min('pitch') ?? 0,
+            'roll_max'  => $coleccion->max('roll') ?? 0,
+            'roll_min'  => $coleccion->min('roll') ?? 0,
+            'alt_max'   => $coleccion->max('alt') ?? 0,
+            'gs_max'    => $coleccion->max('spd') ?? 0,
         ];
 
-        // 4. Buscar datos de la sesión (Alumno)
-        $sesion = Sesion::where('archivo_vuelo', $archivo)
-                        ->with('alumno') 
-                        ->first();
+        // 4. Buscar Sesión (INTENTO DE BÚSQUEDA)
+        // Usamos 'first()' que devuelve null si no encuentra nada, en vez de 'firstOrFail'
+        $sesion = Sesion::where('archivo_vuelo', $archivo)->with('alumno')->first();
 
-        // 5. Enviar a la vista
+        // 5. DEFINIR DATOS DE RESERVA (FALLBACK) 🛡️
+        // Si hay sesión y alumno, usamos sus datos. Si no, usamos datos genéricos.
+        $nombrePiloto = $sesion?->alumno?->nombre_completo ?? 'Piloto No Registrado / Archivo Huérfano';
+        
+        // Creamos un objeto "falso" o usamos el real para evitar errores en la vista
+        // Esto es un truco para no cambiar toda tu vista blade
+        if (!$sesion) {
+            // Creamos una estructura mínima para que la vista no falle
+            $sesion = new \stdClass();
+            $sesion->alumno = new \stdClass();
+            $sesion->alumno->nombre_completo = $nombrePiloto;
+        }
+
         return view('vuelos.show', [
-            'archivoNombre' => $archivo, 
-            'flightData' => $flightData, // Datos crudos para el mapa JS
-            'sesion' => $sesion,         // Info del alumno
-            'stats' => $stats            // Estadísticas calculadas
+            'archivoNombre' => $archivo,
+            'flightData'    => $flightData,
+            'sesion'        => $sesion, // Ahora siempre lleva algo, aunque sea genérico
+            'stats'         => $stats
         ]);
     }
 }
