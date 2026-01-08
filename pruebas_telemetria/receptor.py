@@ -37,9 +37,11 @@ sock.settimeout(1.0) # Timeout de 1 seg para revisar el archivo STOP
 ruta_vuelo = []
 ultimo_tiempo = 0
 
-# Variables para mantener el estado actual de los instrumentos
+# --- VARIABLES DE ESTADO (Instrumentos) ---
 ultimo_spd = 0.0
 ultimo_hdg = 0.0
+ultimo_pitch = 0.0  # Nuevo: Nariz arriba/abajo
+ultimo_roll = 0.0   # Nuevo: Inclinación alas
 
 try:
     while True:
@@ -74,8 +76,9 @@ try:
 
                     # Bloque 17: Pitch, Roll, Headings
                     elif bloque_id == 17:
-                        # Index 3 es el Rumbo Magnético (mag psi)
-                        ultimo_hdg = valores[3]
+                        ultimo_pitch = valores[0] # Index 0: Pitch (theta)
+                        ultimo_roll = valores[1]  # Index 1: Roll (phi)
+                        ultimo_hdg = valores[3]   # Index 3: Rumbo Magnético (psi)
 
                     # Bloque 20: Latitud, Longitud, Altitud
                     elif bloque_id == 20:
@@ -84,14 +87,16 @@ try:
                         # --- GUARDADO TEMPORAL (Solo 1 vez por segundo) ---
                         tiempo_actual = time.time()
                         if tiempo_actual - ultimo_tiempo >= 1.0:
-                            # Guardamos el punto con la info combinada de los otros bloques
+                            # Guardamos el punto con la info combinada
                             ruta_vuelo.append({
                                 "lat": lat, 
                                 "lon": lon, 
                                 "alt": alt, 
-                                "spd": ultimo_spd, # Agregado
-                                "hdg": ultimo_hdg, # Agregado
-                                "ts": tiempo_actual
+                                "spd": round(ultimo_spd, 1), 
+                                "hdg": round(ultimo_hdg, 1), 
+                                "pitch": round(ultimo_pitch, 2), # Nuevo
+                                "roll": round(ultimo_roll, 2),   # Nuevo
+                                "ts": int(tiempo_actual)
                             })
                             ultimo_tiempo = tiempo_actual
 

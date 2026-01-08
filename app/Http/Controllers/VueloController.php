@@ -147,29 +147,43 @@ class VueloController extends Controller
     // Ver mapa y Reproductor de Vuelo
     public function show($archivo)
     {
-        // 1. Construimos la ruta completa al archivo
+        // 1. Construir ruta y verificar existencia
         $rutaCompleta = public_path('vuelos/' . $archivo);
 
-        // 2. Verificamos que el archivo físico exista (Seguridad igual que antes)
         if (!file_exists($rutaCompleta)) {
-            abort(404, 'El archivo de vuelo no existe en el disco.');
+            return redirect()->route('vuelos.index')->with('error', 'El archivo de vuelo no existe en el disco.');
         }
 
-        // 3. LEEMOS EL CONTENIDO (Esto es lo NUEVO y necesario para el reproductor)
-        // file_get_contents abre el archivo y json_decode lo convierte en datos que PHP entiende
+        // 2. Leer y decodificar JSON
         $jsonContent = file_get_contents($rutaCompleta);
         $flightData = json_decode($jsonContent, true);
 
-        // 4. Buscamos la sesión en la Base de Datos (Igual que antes)
+        // 3. CALCULAR ESTADÍSTICAS DE TELEMETRÍA 📊
+        $coleccion = collect($flightData);
+
+        $stats = [
+            // Actitud (Nuevos datos del script Python)
+            'pitch_max' => $coleccion->max('pitch') ?? 0, // Nariz arriba máx
+            'pitch_min' => $coleccion->min('pitch') ?? 0, // Nariz abajo máx
+            'roll_max'  => $coleccion->max('roll') ?? 0,  // Inclinación derecha máx
+            'roll_min'  => $coleccion->min('roll') ?? 0,  // Inclinación izquierda máx
+            
+            // Desempeño
+            'alt_max'   => $coleccion->max('alt') ?? 0,   // Altitud máxima
+            'gs_max'    => $coleccion->max('spd') ?? 0,   // Velocidad máxima (Nota: Python usa 'spd')
+        ];
+
+        // 4. Buscar datos de la sesión (Alumno)
         $sesion = Sesion::where('archivo_vuelo', $archivo)
                         ->with('alumno') 
                         ->first();
 
-        // 5. Enviamos todo a la vista
+        // 5. Enviar a la vista
         return view('vuelos.show', [
-            'archivoNombre' => $archivo, // Nombre del archivo (para el título)
-            'flightData' => $flightData, // ¡CRUCIAL! Los puntos GPS para el mapa
-            'sesion' => $sesion          // Datos del alumno
+            'archivoNombre' => $archivo, 
+            'flightData' => $flightData, // Datos crudos para el mapa JS
+            'sesion' => $sesion,         // Info del alumno
+            'stats' => $stats            // Estadísticas calculadas
         ]);
     }
 }

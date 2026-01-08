@@ -1,339 +1,280 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Debriefing - {{ $sesion ? $sesion->alumno->nombre_completo : 'Vuelo' }}</title>
-    
-    <link rel="stylesheet" href="{{ asset('leaflet/leaflet.css') }}" />
-    <script src="{{ asset('leaflet/leaflet.js') }}"></script>
-
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <style>
-        body { margin: 0; padding: 0; background-color: #0f172a; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
-        #map { height: 100vh; width: 100%; z-index: 1; }
-        
-        .info-panel {
-            position: absolute; bottom: 20px; left: 20px; z-index: 2000; 
-            background: rgba(255, 255, 255, 0.95); padding: 20px; 
-            border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 300px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,1);
-        }
-
-        .control-panel {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 2000;
-            background: rgba(255, 255, 255, 0.95); padding: 15px 25px;
-            border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            width: 90%; max-width: 900px; border: 1px solid rgba(209, 213, 219, 0.5);
-            backdrop-filter: blur(8px); color: #1f2937;
-        }
-
-        .btn-back {
-            position: absolute; top: 20px; left: 20px; z-index: 2000; 
-            background-color: #1f2937; color: white; padding: 8px 16px;
-            border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: all 0.2s;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .btn-back:hover { background-color: #374151; transform: translateY(-1px); }
-
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 16px; width: 16px;
-            border-radius: 50%; background: #2563eb; cursor: pointer;
-            margin-top: -6px; box-shadow: 0 0 5px rgba(37, 99, 235, 0.5);
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px;
-        }
-        
-        #planeImg {
-            filter: drop-shadow(0px 10px 10px rgba(0,0,0,0.6));
-            transition: transform 0.1s linear, width 0.3s ease, height 0.3s ease;
-            image-rendering: -webkit-optimize-contrast;
-        }
-    </style>
-</head>
-<body>
-
-    <a href="{{ route('vuelos.index') }}" class="btn-back">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
-        </svg>
-        Volver
-    </a>
-
-    <div class="info-panel font-sans">
-        @if($sesion)
-            <div class="border-b border-gray-200 pb-3 mb-3">
-                <h2 class="text-lg font-bold text-gray-800 leading-tight">
-                    {{ $sesion->alumno->nombre_completo }}
-                </h2>
-                <div class="flex items-center gap-2 mt-1">
-                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded">Alumno</span>
-                    <p class="text-xs text-gray-500 font-mono">NPI: {{ $sesion->npi }}</p>
-                </div>
-            </div>
-            <div class="mb-3">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Actividad</p>
-                <p class="text-sm text-gray-700 leading-snug">{{ $sesion->actividad ?? 'Vuelo de Instrucción' }}</p>
-            </div>
-            <div class="grid grid-cols-2 gap-4 mb-3 border-b border-gray-200 pb-3">
-                <div><span class="block text-xs font-bold text-gray-400">FECHA</span><span class="text-sm font-semibold text-gray-700">{{ $sesion->fecha->format('d/m/Y') }}</span></div>
-                <div><span class="block text-xs font-bold text-gray-400">HORA</span><span class="text-sm font-semibold text-gray-700">{{ $sesion->hora_inicio->format('H:i') }}</span></div>
-            </div>
-        @else
-            <h2 class="text-lg font-bold text-gray-800 border-b pb-2 mb-2">Vuelo Sin Sesión</h2>
-            <p class="text-xs text-gray-500 mb-4 break-all">{{ $archivoNombre }}</p>
-        @endif
-        
-        <div>
-            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Resumen</p>
-            <div class="grid grid-cols-2 gap-2">
-                <div class="bg-gray-50 p-2 rounded border border-gray-100">
-                    <span class="block text-xs text-gray-500">Altitud Máx</span>
-                    <span class="font-bold text-gray-800 text-base"><span id="max-alt">-</span> <span class="text-xs font-normal">ft</span></span>
-                </div>
-                <div class="bg-gray-50 p-2 rounded border border-gray-100">
-                    <span class="block text-xs text-gray-500">Duración</span>
-                    <span class="font-bold text-gray-800 text-base"><span id="duration">-</span> <span class="text-xs font-normal">min</span></span>
-                </div>
-            </div>
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                {{ __('🗺️ Análisis de Vuelo: ') . $sesion->alumno->nombre_completo }}
+            </h2>
+            <span class="text-sm text-gray-500 dark:text-gray-400 font-mono">{{ $archivoNombre }}</span>
         </div>
-    </div>
+    </x-slot>
 
-    <div class="control-panel font-sans">
-        <div class="mb-2 flex items-center gap-4">
-            <span class="text-xs text-gray-500 font-mono w-20 text-right" id="currentTime">00:00:00</span>
-            
-            <input type="range" id="timeSlider" min="0" max="100" value="0" step="1">
-            
-            <span class="text-xs text-gray-500 font-mono w-20" id="totalTime">--:--:--</span>
-        </div>
+    <div class="py-6 bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors duration-300">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
-        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div class="flex items-center gap-3">
-                <button id="btnPlay" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow transition hover:scale-105">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
-                </button>
-                <button id="btnPause" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white p-2 rounded-full shadow transition hover:scale-105">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                </button>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-blue-500 transition-colors">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Pitch (Nariz)</div>
+                    <div class="flex justify-between items-end">
+                        <div class="text-gray-800 dark:text-white"><span class="text-xs text-gray-400">Máx</span> ⬆ {{ number_format($stats['pitch_max'], 1) }}°</div>
+                        <div class="text-gray-800 dark:text-white"><span class="text-xs text-gray-400">Mín</span> ⬇ {{ number_format($stats['pitch_min'], 1) }}°</div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-indigo-500 transition-colors">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Roll (Alabeo)</div>
+                    <div class="flex justify-between items-end">
+                        <div class="text-gray-800 dark:text-white"><span class="text-xs text-gray-400">Izq</span> ⬅ {{ number_format(abs($stats['roll_min']), 1) }}°</div>
+                        <div class="text-gray-800 dark:text-white"><span class="text-xs text-gray-400">Der</span> ➡ {{ number_format($stats['roll_max'], 1) }}°</div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-green-500 transition-colors">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Altitud Máxima</div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['alt_max'], 0) }} <span class="text-xs">ft</span></div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-red-500 transition-colors">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Velocidad Máx</div>
+                    <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['gs_max'], 0) }} <span class="text-xs">kts</span></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                 
-                <select id="speedBtn" class="bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded px-3 py-1 pr-8 min-w-[100px] focus:outline-none cursor-pointer hover:bg-gray-100 appearance-none">
-                    <option value="2000">0.5x (Lento)</option>
-                    <option value="1000" selected>1x (Normal)</option>
-                    <option value="500">2x (Rápido)</option>
-                    <option value="100">10x (Turbo)</option>
-                </select>
-            </div>
-
-            <div class="flex gap-6 text-center items-center">
-                <div class="min-w-[60px]">
-                    <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-wider">Altitud</span>
-                    <span class="text-lg font-bold text-blue-600" id="liveAlt">0</span>
-                    <span class="text-xs text-gray-500">ft</span>
-                </div>
-                <div class="min-w-[60px]">
-                    <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-wider">Velocidad</span>
-                    <span class="text-lg font-bold text-green-600" id="liveSpd">0</span>
-                    <span class="text-xs text-gray-500">kts</span>
-                </div>
-                <div class="min-w-[60px]">
-                    <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-wider">Rumbo</span>
-                    <span class="text-lg font-bold text-yellow-600" id="liveHdg">0</span>
-                    <span class="text-xs text-gray-500">°</span>
+                <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden border dark:border-gray-700 h-[500px] relative transition-colors">
+                    <div id="map" class="w-full h-full z-0"></div>
                 </div>
 
-                <div class="flex flex-col justify-center ml-4 pl-6 border-l border-gray-200">
-                    <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1 text-left">Escala Altitud</span>
-                    <div style="width: 120px; height: 8px; background: linear-gradient(to right, #ef4444, #eab308, #22c55e); border-radius: 4px;"></div>
-                    <div class="flex justify-between text-[9px] text-gray-500 mt-1 font-mono">
-                        <span>0</span>
-                        <span id="mid-legend">-</span>
-                        <span id="max-legend">-</span>
+                <div class="lg:col-span-1 flex flex-col gap-4">
+                    
+                    <div class="bg-gray-800 text-white rounded-lg shadow-lg p-5 border border-gray-700 h-full">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 border-b border-gray-600 pb-2">
+                            Telemetría en Vivo
+                        </h4>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="text-center">
+                                <div class="text-xs text-gray-400">SPD (Kts)</div>
+                                <div class="text-3xl font-mono font-bold text-green-400" id="live-spd">0</div>
+                            </div>
+                            <div class="text-center border-l border-gray-600">
+                                <div class="text-xs text-gray-400">ALT (Ft)</div>
+                                <div class="text-3xl font-mono font-bold text-green-400" id="live-alt">0</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6 text-center bg-gray-900 rounded p-2">
+                            <div class="text-xs text-gray-400 mb-1">RUMBO (HDG)</div>
+                            <div class="text-2xl font-mono font-bold text-yellow-400 flex justify-center items-center gap-2">
+                                <span id="live-hdg-icon" class="transform transition-transform duration-300">⬆</span>
+                                <span id="live-hdg">000</span>°
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-xs text-gray-300">PITCH (Nariz)</span>
+                                    <span class="font-mono font-bold text-blue-300" id="live-pitch">0.0°</span>
+                                </div>
+                                <div class="w-full bg-gray-600 h-1.5 rounded-full overflow-hidden relative">
+                                    <div id="bar-pitch" class="absolute top-0 bottom-0 w-1 bg-blue-400 transition-all duration-100" style="left: 50%;"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-xs text-gray-300">ROLL (Alabeo)</span>
+                                    <span class="font-mono font-bold text-blue-300" id="live-roll">0.0°</span>
+                                </div>
+                                <div class="w-full bg-gray-600 h-1.5 rounded-full overflow-hidden relative">
+                                    <div id="bar-roll" class="absolute top-0 bottom-0 w-1 bg-indigo-400 transition-all duration-100" style="left: 50%;"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border dark:border-gray-700 sticky bottom-4 z-50 transition-colors">
+                <div class="flex items-center gap-4">
+                    
+                    <button id="play-btn" class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition transform hover:scale-105 focus:outline-none">
+                        <span id="play-icon" class="text-sm">▶</span>
+                    </button>
+
+                    <div class="flex-shrink-0 w-12 text-center">
+                        <span class="text-sm font-mono font-bold text-blue-600 dark:text-blue-400" id="current-time-display">00:00</span>
+                    </div>
+
+                    <div class="flex-1 w-full relative flex items-center">
+                        <input type="range" id="timeline" min="0" max="100" value="0" 
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600 hover:accent-blue-500 transition-all">
+                    </div>
+
+                    <div class="flex-shrink-0 w-12 text-center">
+                        <span class="text-sm font-mono font-bold text-gray-500 dark:text-gray-400" id="total-time-display">00:00</span>
+                    </div>
+
+                    <div class="flex-shrink-0 border-l border-gray-300 dark:border-gray-600 pl-4">
+                        <select id="speed-select" class="bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 border-none rounded text-xs font-bold text-gray-700 dark:text-gray-200 py-1.5 px-2 cursor-pointer focus:ring-0">
+                            <option value="1">1x</option>
+                            <option value="2">2x</option>
+                            <option value="5">5x</option>
+                            <option value="10">10x</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <div id="map"></div>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <script>
-        const cRojo = [239, 68, 68]; const cAmarillo = [234, 179, 8]; const cVerde = [34, 197, 94];
-
-        function interpolateColor(color1, color2, factor) {
-            var result = color1.slice();
-            for (var i = 0; i < 3; i++) {
-                result[i] = Math.round(result[i] + factor * (color2[i] - color1[i]));
-            }
-            return 'rgb(' + result[0] + ',' + result[1] + ',' + result[2] + ')';
-        }
-
-        function getGradientColor(alt, minAlt, maxAlt) {
-            if (maxAlt === minAlt) return 'rgb(' + cAmarillo.join(',') + ')';
-            var pct = (alt - minAlt) / (maxAlt - minAlt);
-            pct = Math.max(0, Math.min(1, pct));
-            if (pct < 0.5) return interpolateColor(cRojo, cAmarillo, pct * 2);
-            else return interpolateColor(cAmarillo, cVerde, (pct - 0.5) * 2);
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            const rawData = {!! json_encode($flightData) !!};
-
+            // 1. OBTENER DATOS
+            const rawData = @json($flightData);
+            
             if (!rawData || rawData.length === 0) {
-                alert("Archivo de vuelo vacío.");
+                alert('El archivo de vuelo está vacío o dañado.');
                 return;
             }
 
-            const flightData = rawData.map(p => ({
-                lat: parseFloat(p.lat || p.latitude || 0),
-                lon: parseFloat(p.lon || p.longitude || 0),
-                alt: Math.round(parseFloat(p.alt || p.altitude || p.elevation || 0)),
-                hdg: Math.round(parseFloat(p.hdg || p.heading || p.mag_psi || 0)),
-                spd: Math.round(parseFloat(p.spd || p.speed || p.gs || p.ias || 0))
-            })).filter(p => p.lat !== 0 && p.lon !== 0);
-
-            let maxAlt = 0;
-            let minAlt = 99999;
-            flightData.forEach(p => {
-                if(p.alt > maxAlt) maxAlt = p.alt;
-                if(p.alt < minAlt) minAlt = p.alt;
-            });
-            
-            document.getElementById('max-alt').innerText = maxAlt;
-            const durationMin = (flightData.length / 60).toFixed(1);
-            document.getElementById('duration').innerText = durationMin;
-            
-            document.getElementById('mid-legend').innerText = Math.round((maxAlt + minAlt) / 2);
-            document.getElementById('max-legend').innerText = maxAlt + "+";
-
-            const startPoint = flightData[0];
-            const map = L.map('map', {zoomControl: false}).setView([startPoint.lat, startPoint.lon], 14);
-            L.control.zoom({position: 'topright'}).addTo(map);
-
-            L.tileLayer('/mapas/mapas_naval/{z}/{x}/{y}.png', {
-                minZoom: 10, maxZoom: 16, tms: true, attribution: 'Escuela Naval',
-                errorTileUrl: '', updateWhenIdle: false
+            // 2. INICIALIZAR MAPA
+            const map = L.map('map').setView([rawData[0].lat, rawData[0].lon], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
             }).addTo(map);
 
-            const totalPoints = flightData.length;
-            const step = Math.ceil(totalPoints / 2000) || 1;
-            const allCoords = [];
+            const latlngs = rawData.map(p => [p.lat, p.lon]);
+            const polyline = L.polyline(latlngs, {color: '#3b82f6', weight: 4}).addTo(map);
+            map.fitBounds(polyline.getBounds());
 
-            for (let i = 0; i < totalPoints - step; i += step) {
-                const p1 = flightData[i];
-                const p2 = flightData[i + step];
-                const color = getGradientColor(p1.alt, minAlt, maxAlt);
-                L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
-                    color: color, weight: 5, opacity: 0.8, smoothFactor: 1
-                }).addTo(map);
-                allCoords.push([p1.lat, p1.lon]);
-            }
-            
-            if(allCoords.length > 0) {
-                map.fitBounds(L.polyline(allCoords).getBounds(), {padding: [50, 50]});
-            }
-
-            const baseIconSize = 64; 
-            
             const planeIcon = L.divIcon({
-                className: 'plane-icon-container',
-                html: `<img src="/images/VueloPC7.png" id="planeImg" style="width: ${baseIconSize}px; height: ${baseIconSize}px; display:block;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/7893/7893979.png'">`,
-                iconSize: [baseIconSize, baseIconSize],
-                iconAnchor: [baseIconSize/2, baseIconSize/2]
+                html: '<div style="font-size: 24px; transform: rotate(0deg);" id="plane-icon">✈️</div>',
+                className: 'plane-marker',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
             });
-            const planeMarker = L.marker([startPoint.lat, startPoint.lon], {icon: planeIcon, zIndexOffset: 2000}).addTo(map);
+            const marker = L.marker([rawData[0].lat, rawData[0].lon], {icon: planeIcon}).addTo(map);
 
-            map.on('zoomend', function() {
-                var currentZoom = map.getZoom();
-                var img = document.getElementById('planeImg');
-                if(img) {
-                    var scale = 1 + (currentZoom - 14) * 0.2; 
-                    scale = Math.max(0.5, Math.min(2.5, scale));
-                    img.dataset.scale = scale; 
-                }
-            });
-
-            // --- REPRODUCTOR ---
-            let currentIndex = 0;
+            // 3. VARIABLES DEL REPRODUCTOR
             let isPlaying = false;
-            let playInterval;
+            let currentIndex = 0;
+            let animationId;
             
-            // --- CORRECCIÓN FINAL: 1000ms por defecto (1 segundo) ---
-            let speedMs = 1000;
+            // Elementos DOM
+            const elSpd = document.getElementById('live-spd');
+            const elAlt = document.getElementById('live-alt');
+            const elHdg = document.getElementById('live-hdg');
+            const elHdgIcon = document.getElementById('live-hdg-icon');
+            const elPitch = document.getElementById('live-pitch');
+            const elRoll = document.getElementById('live-roll');
+            const barPitch = document.getElementById('bar-pitch');
+            const barRoll = document.getElementById('bar-roll');
             
-            const slider = document.getElementById('timeSlider');
-            const elAlt = document.getElementById('liveAlt');
-            const elSpd = document.getElementById('liveSpd');
-            const elHdg = document.getElementById('liveHdg');
-            const elTime = document.getElementById('currentTime');
-            const btnPlay = document.getElementById('btnPlay');
-            const btnPause = document.getElementById('btnPause');
-
-            slider.max = totalPoints - 1;
-
-            const formatTime = (sec) => new Date(sec * 1000).toISOString().substr(11, 8);
+            // Nuevos elementos de tiempo
+            const elCurrentTime = document.getElementById('current-time-display');
+            const elTotalTime = document.getElementById('total-time-display');
             
-            document.getElementById('totalTime').innerText = formatTime(totalPoints);
+            const slider = document.getElementById('timeline');
+            const btnPlay = document.getElementById('play-btn');
+            const iconPlay = document.getElementById('play-icon');
+            const selSpeed = document.getElementById('speed-select');
 
-            function updateFrame(index) {
-                if (index >= totalPoints) return;
-                const data = flightData[index];
+            // Configurar Slider y Tiempo Total
+            const totalSeconds = rawData.length - 1;
+            slider.max = totalSeconds;
+            
+            // Función auxiliar para formatear tiempo (MM:SS)
+            function formatTime(seconds) {
+                const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const sec = (seconds % 60).toString().padStart(2, '0');
+                return `${min}:${sec}`;
+            }
 
-                planeMarker.setLatLng([data.lat, data.lon]);
-                
-                const img = document.getElementById('planeImg');
-                if(img) {
-                    const currentScale = img.dataset.scale || 1;
-                    img.style.transform = `rotate(${data.hdg}deg) scale(${currentScale})`;
-                }
+            // Establecer tiempo total al inicio
+            elTotalTime.innerText = formatTime(totalSeconds);
 
-                elAlt.innerText = data.alt;
-                elSpd.innerText = data.spd;
-                elHdg.innerText = data.hdg;
-                elTime.innerText = formatTime(index);
+            // 4. FUNCIÓN ACTUALIZAR PANTALLA
+            function updateDisplay(index) {
+                const data = rawData[index];
+
+                // Mapa
+                marker.setLatLng([data.lat, data.lon]);
+                const planeDiv = document.getElementById('plane-icon');
+                if(planeDiv) planeDiv.style.transform = `rotate(${data.hdg - 45}deg)`;
+
+                // Panel Lateral
+                const speed = data.spd !== undefined ? data.spd : (data.gs || 0);
+                elSpd.innerText = Math.round(speed);
+                elAlt.innerText = Math.round(data.alt);
+                elHdg.innerText = Math.round(data.hdg).toString().padStart(3, '0');
+                elHdgIcon.style.transform = `rotate(${data.hdg}deg)`;
+
+                // Pitch & Roll
+                const pitch = data.pitch || 0;
+                const roll = data.roll || 0;
+                elPitch.innerText = pitch.toFixed(1) + '°';
+                elRoll.innerText = roll.toFixed(1) + '°';
+
+                // Barras visuales
+                let pitchPct = 50 + (pitch * 1.5); 
+                let rollPct = 50 + (roll * 1.5);
+                pitchPct = Math.max(0, Math.min(100, pitchPct));
+                rollPct = Math.max(0, Math.min(100, rollPct));
+                barPitch.style.left = pitchPct + '%';
+                barRoll.style.left = rollPct + '%';
+
+                // NUEVO: Actualizar tiempo actual en la barra
+                elCurrentTime.innerText = formatTime(index);
+
+                // Sincronizar Slider
                 slider.value = index;
             }
 
+            // 5. LÓGICA DE REPRODUCCIÓN
             function play() {
-                if (currentIndex >= totalPoints - 1) currentIndex = 0;
                 isPlaying = true;
-                btnPlay.classList.add('hidden');
-                btnPause.classList.remove('hidden');
-                playInterval = setInterval(() => {
-                    if (currentIndex < totalPoints - 1) {
-                        currentIndex++;
-                        updateFrame(currentIndex);
-                    } else {
-                        pause();
-                    }
-                }, speedMs);
+                iconPlay.innerText = '⏸';
+                loop();
             }
 
             function pause() {
                 isPlaying = false;
-                clearInterval(playInterval);
-                btnPlay.classList.remove('hidden');
-                btnPause.classList.add('hidden');
+                iconPlay.innerText = '▶';
+                cancelAnimationFrame(animationId);
             }
 
-            btnPlay.addEventListener('click', play);
-            btnPause.addEventListener('click', pause);
+            function loop() {
+                if (!isPlaying) return;
+
+                if (currentIndex < rawData.length - 1) {
+                    currentIndex++;
+                    updateDisplay(currentIndex);
+                    
+                    let delay = 1000 / parseInt(selSpeed.value);
+                    setTimeout(() => {
+                        requestAnimationFrame(loop);
+                    }, delay / 60);
+                } else {
+                    pause();
+                }
+            }
+
+            btnPlay.addEventListener('click', () => {
+                if (isPlaying) pause();
+                else play();
+            });
+
             slider.addEventListener('input', (e) => {
                 pause();
                 currentIndex = parseInt(e.target.value);
-                updateFrame(currentIndex);
-            });
-            document.getElementById('speedBtn').addEventListener('change', (e) => {
-                speedMs = parseInt(e.target.value);
-                if(isPlaying) { pause(); play(); }
+                updateDisplay(currentIndex);
             });
 
-            updateFrame(0);
+            updateDisplay(0);
         });
     </script>
-</body>
-</html>
+</x-app-layout>

@@ -2,6 +2,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 /* ===== ESTILOS BASE ===== */
 body {
     background-color: #f8f9fa;
@@ -45,8 +46,10 @@ body {
 }
 
 .sesion-finalizada {
-    background-color: #ffebeb !important; /* Cambiado de azul a rojo claro */
-    border-left: 4px solid #FE0000; /* Cambiado de azul a rojo */
+    background-color: #ffebeb !important;
+    /* Cambiado de azul a rojo claro */
+    border-left: 4px solid #FE0000;
+    /* Cambiado de azul a rojo */
 }
 
 /* ===== ESTADÍSTICAS ===== */
@@ -86,24 +89,31 @@ body {
 
 /* ===== FORMULARIOS ===== */
 .form-control:focus {
-    border-color: #fe6666; /* Cambiado de azul a rojo claro */
-    box-shadow: 0 0 0 0.25rem rgba(254, 0, 0, 0.25); /* Cambiado de azul a rojo */
+    border-color: #fe6666;
+    /* Cambiado de azul a rojo claro */
+    box-shadow: 0 0 0 0.25rem rgba(254, 0, 0, 0.25);
+    /* Cambiado de azul a rojo */
 }
 
-.form-floating > .form-control:focus ~ label {
-    color: #FE0000; /* Cambiado de azul a rojo */
+.form-floating>.form-control:focus~label {
+    color: #FE0000;
+    /* Cambiado de azul a rojo */
 }
 
 /* ===== BOTONES PERSONALIZADOS ===== */
 .btn-outline-scanner {
-    color: #FE0000; /* Cambiado de azul a rojo */
-    border-color: #FE0000; /* Cambiado de azul a rojo */
+    color: #FE0000;
+    /* Cambiado de azul a rojo */
+    border-color: #FE0000;
+    /* Cambiado de azul a rojo */
 }
 
 .btn-outline-scanner:hover {
     color: #fff;
-    background-color: #FE0000; /* Cambiado de azul a rojo */
-    border-color: #FE0000; /* Cambiado de azul a rojo */
+    background-color: #FE0000;
+    /* Cambiado de azul a rojo */
+    border-color: #FE0000;
+    /* Cambiado de azul a rojo */
 }
 
 /* ===== BADGES ===== */
@@ -124,7 +134,8 @@ body {
 
 /* ===== TABLA RESPONSIVE ===== */
 .table-hover tbody tr:hover {
-    background-color: rgba(254, 0, 0, 0.075); /* Cambiado de azul a rojo */
+    background-color: rgba(254, 0, 0, 0.075);
+    /* Cambiado de azul a rojo */
 }
 
 /* ===== LOADING SPINNER ===== */
@@ -139,7 +150,9 @@ body {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ===== CLASES ADICIONALES PARA ROJO PERSONALIZADO ===== */
@@ -190,15 +203,15 @@ body {
     .stats-card {
         margin-bottom: 1rem;
     }
-    
+
     .btn-group {
         flex-direction: column;
     }
-    
+
     .btn-group .btn {
         margin-bottom: 0.5rem;
     }
-    
+
     .scanner-container {
         padding: 0 15px;
     }
@@ -210,49 +223,72 @@ body {
         background-color: #212529;
         color: #fff;
     }
-    
+
     .card {
         background-color: #343a40;
         border-color: #495057;
     }
-    
+
     .table {
         color: #fff;
     }
-    
+
     .calendario-dia:hover {
         background-color: #495057;
     }
 }
 
 /* Fix para inputs - texto visible */
-input[type="text"], 
-input[type="email"], 
-input[type="password"], 
-textarea, 
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
 select {
-    color: #374151 !important; /* Gris oscuro */
-    background-color: #ffffff !important; /* Fondo blanco */
+    color: #374151 !important;
+    /* Gris oscuro */
+    background-color: #ffffff !important;
+    /* Fondo blanco */
 }
 
-input[type="text"]:focus, 
-input[type="email"]:focus, 
-input[type="password"]:focus, 
-textarea:focus, 
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus,
 select:focus {
-    color: #111827 !important; /* Más oscuro al hacer focus */
+    color: #111827 !important;
+    /* Más oscuro al hacer focus */
     background-color: #ffffff !important;
 }
 
 /* Para inputs con clases específicas de Tailwind - SOLO para inputs */
-input.text-lg, 
-textarea.text-lg, 
+input.text-lg,
+textarea.text-lg,
 select.text-lg {
     color: #374151 !important;
 }
 
-input.font-mono, 
-textarea.font-mono, 
+input.font-mono,
+textarea.font-mono,
 select.font-mono {
     color: #1f2937 !important;
+}
+
+/* --- AGREGA ESTO AL FINAL DEL ARCHIVO --- */
+@layer utilities {
+
+    /* Cuando el modo oscuro (.dark) está activo, redefinimos bg-white */
+    .dark .bg-white {
+        background-color: #1f2937 !important;
+        /* Esto es gray-800 */
+        color: #f3f4f6;
+        /* Forzamos texto claro (gray-100) para que se lea */
+        border-color: #374151;
+        /* Opcional: bordes más suaves (gray-700) */
+    }
+
+    /* También arreglamos los textos oscuros para que se vuelvan blancos automáticamente */
+    .dark .text-gray-900,
+    .dark .text-gray-800 {
+        color: #f3f4f6 !important;
+    }
 }
