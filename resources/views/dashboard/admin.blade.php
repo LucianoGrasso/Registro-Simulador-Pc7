@@ -118,7 +118,7 @@
                 </div>
 
                 <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 lg:col-span-2 flex flex-col h-full transition-colors duration-300">
-                    
+    
                     <div class="mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-end">
                         <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200">📊 Rendimiento Semanal</h3>
                         
@@ -138,16 +138,19 @@
                         
                         @php
                             $collection = collect($estadisticasSemana);
+                            // Evitamos división por cero asegurando un mínimo de 1
                             $maxSesiones = $collection->max('sesiones') ?: 1;
                             $maxMinutos = $collection->max('minutos') ?: 1;
                         @endphp
 
                         @foreach($estadisticasSemana as $dia)
                             @php 
+                                // Cálculos para Sesiones
                                 $cantSesiones = $dia['sesiones'];
                                 $pctSesiones = ($cantSesiones / $maxSesiones) * 100;
                                 $alturaSesion = $cantSesiones == 0 ? 2 : $pctSesiones;
 
+                                // Cálculos para Minutos/Horas
                                 $minutos = $dia['minutos'];
                                 $horas = round($minutos / 60, 1);
                                 $pctHoras = ($minutos / $maxMinutos) * 100;
@@ -168,8 +171,8 @@
                                             {{ $cantSesiones }}
                                         </div>
                                         <div style="height: {{ $alturaSesion }}%;" 
-                                             class="w-full rounded-t-sm transition-all duration-700 ease-out 
-                                             {{ $cantSesiones > 0 ? 'bg-blue-600 shadow-md' : 'bg-blue-100/50 dark:bg-blue-900/30' }}">
+                                            class="w-full rounded-t-sm transition-all duration-700 ease-out 
+                                            {{ $cantSesiones > 0 ? 'bg-blue-600 shadow-md' : 'bg-blue-100/50 dark:bg-blue-900/30' }}">
                                         </div>
                                     </div>
 
@@ -178,8 +181,8 @@
                                             {{ $horas }}h
                                         </div>
                                         <div style="height: {{ $alturaHoras }}%;" 
-                                             class="w-full rounded-t-sm transition-all duration-700 ease-out 
-                                             {{ $minutos > 0 ? 'bg-emerald-500 shadow-sm' : 'bg-emerald-100/50 dark:bg-emerald-900/30' }}">
+                                            class="w-full rounded-t-sm transition-all duration-700 ease-out 
+                                            {{ $minutos > 0 ? 'bg-emerald-500 shadow-sm' : 'bg-emerald-100/50 dark:bg-emerald-900/30' }}">
                                         </div>
                                     </div>
 
@@ -187,9 +190,13 @@
                                 
                                 <div class="mt-3 text-center">
                                     <div class="text-[12px] font-black uppercase text-gray-700 dark:text-gray-400">
-                                        {{ ucfirst(\Carbon\Carbon::createFromFormat('d/m', $dia['fecha'])->locale('es')->isoFormat('ddd')) }}
+                                        {{-- Usamos la variable directa que viene del controlador --}}
+                                        {{ $dia['dia_nombre'] }}
                                     </div>
-                                    <div class="text-[10px] text-gray-500 dark:text-gray-500 font-bold mt-0.5">{{ $dia['fecha'] }}</div>
+                                    <div class="text-[10px] text-gray-500 dark:text-gray-500 font-bold mt-0.5">
+                                        {{-- Usamos la variable formateada --}}
+                                        {{ $dia['fecha_corta'] }}
+                                    </div>
                                 </div>
                             </div>
                         @endforeach

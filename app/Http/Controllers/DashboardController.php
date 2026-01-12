@@ -8,39 +8,35 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+
 Carbon::setLocale('es');
 
 class DashboardController extends Controller
 {
-    /**
-     * Dashboard principal - redirige según el rol
-     */
     public function index()
     {
         if (Auth::user()->isAdmin()) {
             return $this->dashboardAdmin();
         } else {
-            // Operadores tienen su propio dashboard
             return $this->dashboardOperador();
         }
     }
 
-    /**
-     * Dashboard para operadores (sin permisos de admin)
-     */
     private function dashboardOperador()
     {
-        // Estadísticas básicas que pueden ver los operadores
+        // Obtenemos las sesiones de hoy finalizadas para calcular el solapamiento
+        $sesionesHoyFinalizadas = Sesion::whereDate('fecha', today())
+                                    ->where('estado', 'finalizada')
+                                    ->get();
+
         $estadisticas = [
             'sesiones_hoy' => Sesion::whereDate('fecha', today())->count(),
             'sesiones_activas' => Sesion::where('estado', 'activa')->count(),
-            'tiempo_total_hoy' => Sesion::whereDate('fecha', today())
-                                      ->where('estado', 'finalizada')
-                                      ->sum('duracion_minutos'),
+            // Usamos la función corregida
+            'tiempo_total_hoy' => $this->calcularTiempoRealMaquina($sesionesHoyFinalizadas),
             'alumnos_hoy' => Sesion::whereDate('fecha', today())->distinct('alumno_id')->count(),
         ];
 
-        // Alumnos más activos del mes
         $alumnosActivos = Alumno::withCount(['sesiones' => function($query) {
                                     $query->whereMonth('fecha', date('m'))
                                           ->whereYear('fecha', date('Y'));
@@ -49,37 +45,20 @@ class DashboardController extends Controller
                                 ->orderBy('sesiones_count', 'desc')
                                 ->limit(5)
                                 ->get();
-                            
 
-        // Sesiones activas actuales
         $sesionesActivas = Sesion::activas()
                                 ->with(['alumno', 'usuarioInicio'])
                                 ->orderBy('hora_inicio', 'asc')
                                 ->get();
 
-        // Sesiones recientes del día (últimas 15)
         $sesionesRecientes = Sesion::whereDate('fecha', today())
                                   ->with(['alumno', 'usuarioInicio', 'usuarioFin'])
                                   ->orderBy('hora_inicio', 'desc')
                                   ->limit(15)
                                   ->get();
 
-        // Estadísticas de los últimos 7 días (solo para mostrar tendencia)
-        $estadisticasSemana = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $fecha = Carbon::now()->subDays($i);
-            $sesionesDelDia = Sesion::whereDate('fecha', $fecha)->get();
-            
-            $estadisticasSemana[] = [
-                'fecha_completa' => $fecha,
-                'fecha' => $fecha->format('d/m'),
-                'dia' => ucfirst($fecha->locale('es')->isoFormat('dddd')), // Capitalizar aquí
-                'sesiones' => $sesionesDelDia->count(),
-                'minutos' => $sesionesDelDia->where('estado', 'finalizada')->sum('duracion_minutos'),
-            ];
-        }
+        $estadisticasSemana = $this->getEstadisticasSemana();
 
-        // Sesiones que necesitan atención
         $sesionesAtencion = Sesion::activas()
                                  ->with('alumno')
                                  ->get()
@@ -97,49 +76,32 @@ class DashboardController extends Controller
         ));
     }
 
-    /**
-     * Dashboard para administradores
-     */
     private function dashboardAdmin()
     {
-        // Estadísticas generales
+        $sesionesHoyFinalizadas = Sesion::whereDate('fecha', today())
+                                    ->where('estado', 'finalizada')
+                                    ->get();
+
         $estadisticas = [
             'total_alumnos' => Alumno::where('is_active', true)->count(),
             'total_sesiones_hoy' => Sesion::whereDate('fecha', today())->count(),
             'sesiones_activas' => Sesion::where('estado', 'activa')->count(),
-            'tiempo_total_hoy' => Sesion::whereDate('fecha', today())
-                                      ->where('estado', 'finalizada')
-                                      ->sum('duracion_minutos'),
+            // Usamos la función corregida
+            'tiempo_total_hoy' => $this->calcularTiempoRealMaquina($sesionesHoyFinalizadas),
         ];
 
-        // Sesiones activas actuales
         $sesionesActivas = Sesion::activas()
                                 ->with(['alumno', 'usuarioInicio'])
                                 ->orderBy('hora_inicio', 'asc')
                                 ->get();
 
-        // Sesiones recientes (últimas 10)
         $sesionesRecientes = Sesion::with(['alumno', 'usuarioInicio', 'usuarioFin'])
                                   ->orderBy('created_at', 'desc')
                                   ->limit(10)
                                   ->get();
 
-        // Estadísticas de los últimos 7 días
-        $estadisticasSemana = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $fecha = Carbon::now()->subDays($i);
-            $sesionesDelDia = Sesion::whereDate('fecha', $fecha)->get();
-            
-            $estadisticasSemana[] = [
-                'fecha' => $fecha->format('d/m'),
-                'dia' => $fecha->format('D'),
-                'sesiones' => $sesionesDelDia->count(),
-                'minutos' => $sesionesDelDia->where('estado', 'finalizada')->sum('duracion_minutos'),
-                'alumnos_unicos' => $sesionesDelDia->unique('alumno_id')->count(),
-            ];
-        }
+        $estadisticasSemana = $this->getEstadisticasSemana();
 
-        // Alumnos más activos del mes
         $alumnosActivos = Alumno::withCount(['sesiones' => function($query) {
                                     $query->whereMonth('fecha', date('m'))
                                           ->whereYear('fecha', date('Y'));
@@ -149,7 +111,6 @@ class DashboardController extends Controller
                                 ->limit(5)
                                 ->get();
 
-        // Sesiones que necesitan atención (muy largas)
         $sesionesAtencion = Sesion::activas()
                                  ->with('alumno')
                                  ->get()
@@ -167,17 +128,17 @@ class DashboardController extends Controller
         ));
     }
 
-    /**
-     * API para actualizar dashboard en tiempo real
-     */
     public function datosActualizados()
     {
+        $sesionesHoyFinalizadas = Sesion::whereDate('fecha', today())
+                                    ->where('estado', 'finalizada')
+                                    ->get();
+
         $estadisticas = [
             'sesiones_activas' => Sesion::where('estado', 'activa')->count(),
             'sesiones_hoy' => Sesion::whereDate('fecha', today())->count(),
-            'tiempo_total_hoy' => Sesion::whereDate('fecha', today())
-                                      ->where('estado', 'finalizada')
-                                      ->sum('duracion_minutos'),
+            // Usamos la función corregida
+            'tiempo_total_hoy' => $this->calcularTiempoRealMaquina($sesionesHoyFinalizadas),
         ];
 
         $sesionesActivas = Sesion::activas()
@@ -200,9 +161,7 @@ class DashboardController extends Controller
             'timestamp' => now()->format('H:i:s')
         ]);
     }
-    /**
-     * AJAX: Obtener sesiones activas para el dashboard
-     */
+
     public function sesionesActivasAjax()
     {
         $sesionesActivas = Sesion::activas()
@@ -228,5 +187,93 @@ class DashboardController extends Controller
             'count' => $sesionesActivas->count(),
             'sesiones' => $sesionesFormatted
         ]);
+    }
+
+    /**
+     * CORRECCIÓN PRINCIPAL:
+     * 1. Maneja fechas duplicadas forzando formato H:i:s
+     * 2. Calcula la diferencia SIEMPRE positiva (Inicio -> Fin)
+     */
+    private function calcularTiempoRealMaquina($sesiones)
+    {
+        if ($sesiones->isEmpty()) return 0;
+
+        $intervalos = $sesiones->map(function ($sesion) {
+            // Forzamos formato solo hora para evitar "Double date specification"
+            $horaInicioStr = $sesion->hora_inicio instanceof \Carbon\Carbon 
+                ? $sesion->hora_inicio->format('H:i:s') 
+                : $sesion->hora_inicio;
+
+            $inicio = Carbon::parse($sesion->fecha->format('Y-m-d') . ' ' . $horaInicioStr);
+
+            if ($sesion->hora_fin) {
+                $horaFinStr = $sesion->hora_fin instanceof \Carbon\Carbon 
+                    ? $sesion->hora_fin->format('H:i:s') 
+                    : $sesion->hora_fin;
+                
+                $fin = Carbon::parse($sesion->fecha->format('Y-m-d') . ' ' . $horaFinStr);
+            } else {
+                $fin = now();
+            }
+            
+            return [
+                'inicio' => $inicio,
+                'fin'    => $fin
+            ];
+        })->sortBy('inicio')->values();
+
+        $tiempoTotalMinutos = 0;
+        
+        if ($intervalos->isEmpty()) return 0;
+
+        $inicioActual = $intervalos[0]['inicio'];
+        $finActual    = $intervalos[0]['fin'];
+
+        foreach ($intervalos as $intervalo) {
+            if ($intervalo['inicio']->gt($finActual)) {
+                // CORRECCION: Inicio -> Fin (diffInMinutes)
+                // Usamos abs() por seguridad, aunque el orden lógico ya es correcto
+                $tiempoTotalMinutos += abs($inicioActual->diffInMinutes($finActual));
+                
+                $inicioActual = $intervalo['inicio'];
+                $finActual    = $intervalo['fin'];
+            } 
+            else {
+                if ($intervalo['fin']->gt($finActual)) {
+                    $finActual = $intervalo['fin'];
+                }
+            }
+        }
+
+        // Sumar último bloque (CORREGIDO: Inicio -> Fin)
+        $tiempoTotalMinutos += abs($inicioActual->diffInMinutes($finActual));
+
+        return $tiempoTotalMinutos;
+    }
+
+    private function getEstadisticasSemana()
+    {
+        $estadisticasSemana = [];
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $fecha = Carbon::now()->subDays($i);
+            
+            // Necesitamos hora_inicio y hora_fin para el cálculo preciso
+            $sesionesDelDia = Sesion::whereDate('fecha', $fecha)
+                                    ->get(['id', 'estado', 'fecha', 'hora_inicio', 'hora_fin', 'duracion_minutos']); 
+            
+            $sesionesFinalizadas = $sesionesDelDia->where('estado', 'finalizada');
+
+            $minutosReales = $this->calcularTiempoRealMaquina($sesionesFinalizadas);
+
+            $estadisticasSemana[] = [
+                'dia_nombre' => ucfirst($fecha->locale('es')->isoFormat('ddd')),
+                'fecha_corta' => $fecha->format('d/m'),
+                'sesiones' => $sesionesDelDia->count(),
+                'minutos' => $minutosReales,
+            ];
+        }
+
+        return $estadisticasSemana;
     }
 }
