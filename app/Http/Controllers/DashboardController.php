@@ -24,7 +24,6 @@ class DashboardController extends Controller
 
     private function dashboardOperador()
     {
-        // Obtenemos las sesiones de hoy finalizadas para calcular el solapamiento
         $sesionesHoyFinalizadas = Sesion::whereDate('fecha', today())
                                     ->where('estado', 'finalizada')
                                     ->get();
@@ -187,19 +186,19 @@ class DashboardController extends Controller
     }
 
     /**
-     * Algoritmo corregido:
-     * 1. Detecta cruce de medianoche (ej: 23:50 a 00:20).
-     * 2. Evita duplicados.
+     * Algoritmo robusto para calcular tiempo real:
+     * 1. Maneja duplicados de IDs.
+     * 2. Detecta cruce de medianoche (Fin < Inicio -> +1 día).
+     * 3. Calcula solapamientos correctamente.
      */
     private function calcularTiempoRealMaquina($sesiones)
     {
         if ($sesiones->isEmpty()) return 0;
 
-        // CORRECCIÓN 1: Asegurar unicidad por ID para evitar duplicados si hay joins raros
         $sesionesUnicas = $sesiones->unique('id');
 
         $intervalos = $sesionesUnicas->map(function ($sesion) {
-            
+            // Forzamos solo hora para evitar problemas de fechas dobles
             $horaInicioStr = $sesion->hora_inicio instanceof \Carbon\Carbon 
                 ? $sesion->hora_inicio->format('H:i:s') 
                 : $sesion->hora_inicio;
@@ -213,15 +212,13 @@ class DashboardController extends Controller
                 
                 $fin = Carbon::parse($sesion->fecha->format('Y-m-d') . ' ' . $horaFinStr);
 
-                // CORRECCIÓN 2: Si la hora fin es MENOR que la inicio (ej: 00:27 < 23:53),
-                // significa que es el día siguiente. Sumamos un día.
+                // CORRECCIÓN MEDIANOCHE: Si termina "antes" de empezar (00:27 < 23:53), es mañana.
                 if ($fin->lt($inicio)) {
                     $fin->addDay();
                 }
-
             } else {
                 $fin = now();
-                // Si la sesión activa empezó ayer (cruce de medianoche en vivo)
+                // Lo mismo para sesiones activas que cruzan la noche
                 if ($fin->lt($inicio)) {
                     $fin->addDay();
                 }
@@ -233,29 +230,34 @@ class DashboardController extends Controller
             ];
         })->sortBy('inicio')->values();
 
-        $tiempoTotalMinutos = 0;
-        
         if ($intervalos->isEmpty()) return 0;
 
+        $tiempoTotalMinutos = 0;
+        
         $inicioActual = $intervalos[0]['inicio'];
         $finActual    = $intervalos[0]['fin'];
 
         foreach ($intervalos as $intervalo) {
-            // Si hay hueco entre el fin actual y el nuevo inicio
+            // Si el nuevo intervalo empieza DESPUÉS de que terminó el actual (hay un hueco)
             if ($intervalo['inicio']->gt($finActual)) {
-                $tiempoTotalMinutos += $finActual->diffInMinutes($inicioActual);
+                // Sumamos el bloque anterior al total
+                // CORRECCIÓN NEGATIVO: Usamos abs() para asegurar positivo
+                $tiempoTotalMinutos += abs($finActual->diffInMinutes($inicioActual));
+                
+                // Nuevo bloque
                 $inicioActual = $intervalo['inicio'];
                 $finActual    = $intervalo['fin'];
             } 
             else {
-                // Si se solapan, extendemos el final si es necesario
+                // Si se solapan, extendemos el final
                 if ($intervalo['fin']->gt($finActual)) {
                     $finActual = $intervalo['fin'];
                 }
             }
         }
 
-        $tiempoTotalMinutos += $finActual->diffInMinutes($inicioActual);
+        // Sumar el último bloque pendiente
+        $tiempoTotalMinutos += abs($finActual->diffInMinutes($inicioActual));
 
         return $tiempoTotalMinutos;
     }
@@ -267,7 +269,6 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $fecha = Carbon::now()->subDays($i);
             
-            // Obtenemos todos los campos necesarios
             $sesionesDelDia = Sesion::whereDate('fecha', $fecha)
                                     ->get(['id', 'estado', 'fecha', 'hora_inicio', 'hora_fin', 'duracion_minutos']); 
             
