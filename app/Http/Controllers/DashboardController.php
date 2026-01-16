@@ -32,7 +32,6 @@ class DashboardController extends Controller
         $estadisticas = [
             'sesiones_hoy' => Sesion::whereDate('fecha', today())->count(),
             'sesiones_activas' => Sesion::where('estado', 'activa')->count(),
-            // Usamos la función corregida
             'tiempo_total_hoy' => $this->calcularTiempoRealMaquina($sesionesHoyFinalizadas),
             'alumnos_hoy' => Sesion::whereDate('fecha', today())->distinct('alumno_id')->count(),
         ];
@@ -86,7 +85,6 @@ class DashboardController extends Controller
             'total_alumnos' => Alumno::where('is_active', true)->count(),
             'total_sesiones_hoy' => Sesion::whereDate('fecha', today())->count(),
             'sesiones_activas' => Sesion::where('estado', 'activa')->count(),
-            // Usamos la función corregida
             'tiempo_total_hoy' => $this->calcularTiempoRealMaquina($sesionesHoyFinalizadas),
         ];
 
@@ -137,7 +135,6 @@ class DashboardController extends Controller
         $estadisticas = [
             'sesiones_activas' => Sesion::where('estado', 'activa')->count(),
             'sesiones_hoy' => Sesion::whereDate('fecha', today())->count(),
-            // Usamos la función corregida
             'tiempo_total_hoy' => $this->calcularTiempoRealMaquina($sesionesHoyFinalizadas),
         ];
 
@@ -190,16 +187,19 @@ class DashboardController extends Controller
     }
 
     /**
-     * CORRECCIÓN PRINCIPAL:
-     * 1. Maneja fechas duplicadas forzando formato H:i:s
-     * 2. Calcula la diferencia SIEMPRE positiva (Inicio -> Fin)
+     * Algoritmo corregido:
+     * 1. Detecta cruce de medianoche (ej: 23:50 a 00:20).
+     * 2. Evita duplicados.
      */
     private function calcularTiempoRealMaquina($sesiones)
     {
         if ($sesiones->isEmpty()) return 0;
 
-        $intervalos = $sesiones->map(function ($sesion) {
-            // Forzamos formato solo hora para evitar "Double date specification"
+        // CORRECCIÓN 1: Asegurar unicidad por ID para evitar duplicados si hay joins raros
+        $sesionesUnicas = $sesiones->unique('id');
+
+        $intervalos = $sesionesUnicas->map(function ($sesion) {
+            
             $horaInicioStr = $sesion->hora_inicio instanceof \Carbon\Carbon 
                 ? $sesion->hora_inicio->format('H:i:s') 
                 : $sesion->hora_inicio;
@@ -212,8 +212,19 @@ class DashboardController extends Controller
                     : $sesion->hora_fin;
                 
                 $fin = Carbon::parse($sesion->fecha->format('Y-m-d') . ' ' . $horaFinStr);
+
+                // CORRECCIÓN 2: Si la hora fin es MENOR que la inicio (ej: 00:27 < 23:53),
+                // significa que es el día siguiente. Sumamos un día.
+                if ($fin->lt($inicio)) {
+                    $fin->addDay();
+                }
+
             } else {
                 $fin = now();
+                // Si la sesión activa empezó ayer (cruce de medianoche en vivo)
+                if ($fin->lt($inicio)) {
+                    $fin->addDay();
+                }
             }
             
             return [
@@ -230,23 +241,21 @@ class DashboardController extends Controller
         $finActual    = $intervalos[0]['fin'];
 
         foreach ($intervalos as $intervalo) {
+            // Si hay hueco entre el fin actual y el nuevo inicio
             if ($intervalo['inicio']->gt($finActual)) {
-                // CORRECCION: Inicio -> Fin (diffInMinutes)
-                // Usamos abs() por seguridad, aunque el orden lógico ya es correcto
-                $tiempoTotalMinutos += abs($inicioActual->diffInMinutes($finActual));
-                
+                $tiempoTotalMinutos += $finActual->diffInMinutes($inicioActual);
                 $inicioActual = $intervalo['inicio'];
                 $finActual    = $intervalo['fin'];
             } 
             else {
+                // Si se solapan, extendemos el final si es necesario
                 if ($intervalo['fin']->gt($finActual)) {
                     $finActual = $intervalo['fin'];
                 }
             }
         }
 
-        // Sumar último bloque (CORREGIDO: Inicio -> Fin)
-        $tiempoTotalMinutos += abs($inicioActual->diffInMinutes($finActual));
+        $tiempoTotalMinutos += $finActual->diffInMinutes($inicioActual);
 
         return $tiempoTotalMinutos;
     }
@@ -258,7 +267,7 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $fecha = Carbon::now()->subDays($i);
             
-            // Necesitamos hora_inicio y hora_fin para el cálculo preciso
+            // Obtenemos todos los campos necesarios
             $sesionesDelDia = Sesion::whereDate('fecha', $fecha)
                                     ->get(['id', 'estado', 'fecha', 'hora_inicio', 'hora_fin', 'duracion_minutos']); 
             
