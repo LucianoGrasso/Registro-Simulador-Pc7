@@ -196,19 +196,42 @@ class SesionController extends Controller
     
     // ... Métodos auxiliares ...
     public function activasAjax() {
-        $sesionesActivas = Sesion::activas()->with('alumno')->orderBy('hora_inicio', 'asc')->get();
+        Carbon::setLocale('es'); 
+
+        $sesionesActivas = Sesion::activas()
+                                ->with('alumno')
+                                ->orderBy('hora_inicio', 'asc')
+                                ->get();
+
         $sesionesFormatted = $sesionesActivas->map(function ($sesion) {
+            
+            // Calculamos la diferencia inicial para mostrar algo rápido mientras carga JS
+            $segundosTotales = abs($sesion->hora_inicio->diffInSeconds(now()));
+            $tiempoTexto = gmdate('H:i:s', $segundosTotales);
+
             return [
                 'id' => $sesion->id,
-                'alumno' => ['nombre_completo' => $sesion->alumno->nombre_completo, 'npi' => $sesion->alumno->npi],
+                'alumno' => [
+                    'nombre_completo' => $sesion->alumno->nombre_completo,
+                    'npi' => $sesion->alumno->npi
+                ],
                 'hora_inicio' => $sesion->hora_inicio->format('H:i'),
-                'tiempo_transcurrido' => $sesion->tiempo_transcurrido,
+                
+                // CRUCIAL: Enviamos la fecha exacta en formato ISO para Javascript
+                'inicio_iso' => $sesion->hora_inicio->toIso8601String(),
+                
+                'tiempo_transcurrido' => $tiempoTexto,
                 'actividad' => $sesion->actividad,
                 'necesita_atencion' => $sesion->necesitaAtencion()
             ];
         });
-        return response()->json(['count' => $sesionesActivas->count(), 'sesiones' => $sesionesFormatted]);
+
+        return response()->json([
+            'count' => $sesionesActivas->count(), 
+            'sesiones' => $sesionesFormatted
+        ]);
     }
+
     public function reporteDiario(Request $request) { 
         if (!Auth::user()->isAdmin()) return redirect()->route('sesiones.scanner')->with('error', 'Sin permisos');
         $fecha = $request->get('fecha', today());

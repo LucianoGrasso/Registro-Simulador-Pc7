@@ -213,6 +213,8 @@
         let qrScanner = null;
         let currentMode = 'manual';
 
+        // === FUNCIONES DE FLUJO DE TRABAJO ===
+
         function confirmarFinalizacion(sesionId, nombreAlumno) {
             if (confirm(`¿Estás seguro de que deseas finalizar la sesión de ${nombreAlumno}?`)) {
                 finalizarSesionDirecta(sesionId);
@@ -221,9 +223,11 @@
 
         function finalizarSesionDirecta(sesionId) {
             const boton = document.querySelector(`button[onclick*="${sesionId}"]`);
-            const sesionDiv = boton.closest('div[class*="border-yellow-200"]'); 
+            // Buscamos el contenedor padre para efectos visuales
+            const sesionDiv = boton.closest('div.transition-colors'); 
             const textoOriginal = boton.innerHTML;
-            boton.innerHTML = '⏳ Finalizando...';
+            
+            boton.innerHTML = '⏳ ...';
             boton.disabled = true;
             
             fetch(`/sesiones/${sesionId}/finalizar-directa`, {
@@ -240,18 +244,24 @@
             .then(data => {
                 if (data.success) {
                     mostrarResultadoFinalizacion(data);
-                    boton.innerHTML = '✅ Finalizada';
+                    boton.innerHTML = '✅';
                     boton.classList.remove('bg-red-600', 'hover:bg-red-700');
                     boton.classList.add('bg-green-600');
+                    
+                    // Animación de salida
                     setTimeout(() => {
-                        sesionDiv.style.transition = 'opacity 0.5s, transform 0.5s';
-                        sesionDiv.style.opacity = '0';
-                        sesionDiv.style.transform = 'scale(0.95)';
-                        setTimeout(() => {
-                            sesionDiv.remove();
-                            actualizarContadorSesiones();
-                        }, 500);
-                    }, 2000);
+                        if(sesionDiv) {
+                            sesionDiv.style.transition = 'opacity 0.5s, transform 0.5s';
+                            sesionDiv.style.opacity = '0';
+                            sesionDiv.style.transform = 'scale(0.95)';
+                            setTimeout(() => {
+                                sesionDiv.remove();
+                                actualizarContadorSesiones(); // Recalcular totales visuales
+                            }, 500);
+                        } else {
+                            actualizarSesionesActivas(); // Fallback si no encuentra el div
+                        }
+                    }, 1000);
                 } else {
                     alert('Error: ' + data.message);
                     boton.innerHTML = textoOriginal;
@@ -267,18 +277,98 @@
         }
 
         function actualizarContadorSesiones() {
-            const sesionesActivas = document.querySelectorAll('#sesiones-activas-lista > div[class*="border-yellow-200"]').length;
-            document.getElementById('sesiones-activas-count').textContent = sesionesActivas;
-            if (sesionesActivas === 0) {
-                document.getElementById('sesiones-activas-lista').innerHTML = `
+            // Contamos visualmente cuántos divs quedan en la lista
+            const lista = document.getElementById('sesiones-activas-lista');
+            // Buscamos divs directos que tengan borde (las tarjetas)
+            const sesionesVisibles = lista.querySelectorAll(':scope > div.border').length;
+            
+            document.getElementById('sesiones-activas-count').textContent = sesionesVisibles;
+            
+            if (sesionesVisibles === 0) {
+                lista.innerHTML = `
                     <div class="text-center text-gray-500 dark:text-gray-400 py-8">
                         <div class="text-4xl mb-2">✈️</div>
                         <div>No hay sesiones activas</div>
-                        <div class="text-sm">El simulador esta disponible</div>
+                        <div class="text-sm">El simulador está disponible</div>
                     </div>
                 `;
             }
         }
+
+        // === GESTIÓN DE SESIONES ACTIVAS (AJAX + CRONÓMETRO LOCAL) ===
+
+        function actualizarSesionesActivas() {
+            fetch('{{ route("sesiones.activas-ajax") }}')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('sesiones-activas-count').textContent = data.count;
+                    document.getElementById('ultima-actualizacion').textContent = new Date().toLocaleTimeString();
+                    const lista = document.getElementById('sesiones-activas-lista');
+                    
+                    let html = '';
+                    if (data.sesiones.length === 0) {
+                        html = `<div class="text-center text-gray-500 dark:text-gray-400 py-8"><div class="text-4xl mb-2">✈️</div><div>No hay sesiones activas</div><div class="text-sm">El simulador esta disponible</div></div>`;
+                    } else {
+                        data.sesiones.forEach(sesion => {
+                            // IMPORTANTE: Aquí inyectamos 'inicio_iso' en data-inicio
+                            html += `
+                                <div class="border border-yellow-200 dark:border-yellow-700/50 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 transition-colors">
+                                    <div class="flex justify-between items-start">
+                                        <div class="flex-1">
+                                            <div class="font-medium text-gray-900 dark:text-gray-200 text-lg">${sesion.alumno.nombre_completo}</div>
+                                            <div class="text-sm text-gray-600 dark:text-gray-400">NPI: <span class="font-mono">${sesion.alumno.npi}</span></div>
+                                            <div class="text-sm text-gray-600 dark:text-gray-400">Inicio: ${sesion.hora_inicio}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-500 mt-1 italic">${sesion.actividad.substring(0, 60)}</div>
+                                        </div>
+                                        <div class="text-right flex flex-col items-end space-y-2 min-w-[100px]">
+                                            
+                                            <div class="text-xl font-bold font-mono text-yellow-700 dark:text-yellow-500 cronometro-vivo" 
+                                                 data-inicio="${sesion.inicio_iso}">
+                                                ${sesion.tiempo_transcurrido}
+                                            </div>
+
+                                            ${sesion.necesita_atencion ? '<div class="text-xs text-red-600 dark:text-red-400 font-bold animate-pulse">⚠️ ALERTA DE TIEMPO</div>' : ''}
+                                            
+                                            <button onclick="confirmarFinalizacion(${sesion.id}, '${sesion.alumno.nombre_completo}')" 
+                                                    class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded shadow transition-colors w-full">
+                                                🏁 Finalizar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    lista.innerHTML = html;
+                })
+                .catch(error => console.error('Error actualizando sesiones:', error));
+        }
+
+        // Esta función corre cada 1 segundo localmente
+        function tickCronometros() {
+            const cronometros = document.querySelectorAll('.cronometro-vivo');
+            const ahora = new Date();
+
+            cronometros.forEach(el => {
+                const fechaInicio = new Date(el.getAttribute('data-inicio'));
+                // Diferencia en milisegundos
+                let diff = Math.abs(ahora - fechaInicio);
+                
+                // Convertir a HH:MM:SS
+                const hours = Math.floor(diff / 3600000);
+                const minutes = Math.floor((diff % 3600000) / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+
+                // Formateo con ceros a la izquierda
+                const hStr = hours > 0 ? hours.toString().padStart(2, '0') + ':' : '';
+                const mStr = minutes.toString().padStart(2, '0');
+                const sStr = seconds.toString().padStart(2, '0');
+
+                el.textContent = `${hStr}${mStr}:${sStr}`;
+            });
+        }
+
+        // === UTILIDADES DE UI ===
 
         function mostrarResultadoFinalizacion(data) {
             const resultadoDiv = document.getElementById('resultado');
@@ -296,19 +386,54 @@
             setTimeout(() => { resultadoDiv.classList.add('hidden'); }, 8000);
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('scanner-form');
-            const npiInput = document.getElementById('npi');
+        function mostrarResultado(data) {
             const resultadoDiv = document.getElementById('resultado');
             const resultadoContent = document.getElementById('resultado-content');
+            let bgClass = data.action === 'iniciar' ? 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800';
+            let iconClass = data.action === 'iniciar' ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400';
+            let icon = data.action === 'iniciar' ? '✅' : '🏁';
+            
+            let html = `<div class="${bgClass} border rounded-lg p-4">`;
+            html += `<div class="flex items-start">`;
+            html += `<div class="text-2xl mr-3">${icon}</div>`;
+            html += `<div>`;
+            html += `<h4 class="font-medium ${iconClass}">${data.alumno}</h4>`;
+            html += `<p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${data.message}</p>`;
+            if (data.action === 'iniciar') html += `<div class="text-sm text-gray-500 dark:text-gray-400 mt-2">Hora de inicio: ${data.hora_inicio}</div>`;
+            else html += `<div class="text-sm text-gray-500 dark:text-gray-400 mt-2">Duración: ${data.duracion}<br>${data.hora_inicio} - ${data.hora_fin}</div>`;
+            html += `</div></div></div>`;
+            
+            resultadoContent.innerHTML = html;
+            resultadoDiv.classList.remove('hidden');
+            setTimeout(() => { resultadoDiv.classList.add('hidden'); }, 8000);
+        }
+
+        function mostrarError(mensaje) {
+            const resultadoDiv = document.getElementById('resultado');
+            const resultadoContent = document.getElementById('resultado-content');
+            let html = `<div class="bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4"><div class="flex items-center"><div class="text-red-600 dark:text-red-400 text-xl mr-3">❌</div><div class="text-red-800 dark:text-red-300">${mensaje}</div></div></div>`;
+            resultadoContent.innerHTML = html;
+            resultadoDiv.classList.remove('hidden');
+            setTimeout(() => { resultadoDiv.classList.add('hidden'); }, 5000);
+        }
+
+        // === EVENT LISTENERS & INICIALIZACIÓN ===
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar formulario y escáner
+            const form = document.getElementById('scanner-form');
+            const npiInput = document.getElementById('npi');
             const btnProcesar = document.getElementById('btn-procesar');
             const btnText = document.getElementById('btn-text');
             const btnLoading = document.getElementById('btn-loading');
             
+            // Botones de modo
             const btnManual = document.getElementById('btn-manual');
             const btnCamera = document.getElementById('btn-camera');
             const modoManual = document.getElementById('modo-manual');
             const modoCamera = document.getElementById('modo-camera');
+            
+            // Elementos de cámara
             const video = document.getElementById('qr-video');
             const startCamera = document.getElementById('start-camera');
             const stopCamera = document.getElementById('stop-camera');
@@ -316,26 +441,26 @@
             const npiDetectado = document.getElementById('npi-detectado');
             const npiValor = document.getElementById('npi-valor');
 
-            btnManual.addEventListener('click', function() { switchToMode('manual'); });
-            btnCamera.addEventListener('click', function() { switchToMode('camera'); });
+            // Cambio de modo
+            btnManual.addEventListener('click', function() { 
+                currentMode = 'manual';
+                btnManual.className = 'flex-1 py-2 px-4 bg-blue-500 text-white rounded font-medium transition-colors';
+                btnCamera.className = 'flex-1 py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-medium transition-colors';
+                modoManual.classList.remove('hidden');
+                modoCamera.classList.add('hidden');
+                npiInput.focus();
+                if (qrScanner) stopQrScanner();
+            });
 
-            function switchToMode(mode) {
-                currentMode = mode;
-                if (mode === 'manual') {
-                    btnManual.className = 'flex-1 py-2 px-4 bg-blue-500 text-white rounded font-medium transition-colors';
-                    btnCamera.className = 'flex-1 py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-medium transition-colors';
-                    modoManual.classList.remove('hidden');
-                    modoCamera.classList.add('hidden');
-                    npiInput.focus();
-                    if (qrScanner) stopQrScanner();
-                } else {
-                    btnCamera.className = 'flex-1 py-2 px-4 bg-blue-500 text-white rounded font-medium transition-colors';
-                    btnManual.className = 'flex-1 py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-medium transition-colors';
-                    modoCamera.classList.remove('hidden');
-                    modoManual.classList.add('hidden');
-                }
-            }
+            btnCamera.addEventListener('click', function() { 
+                currentMode = 'camera';
+                btnCamera.className = 'flex-1 py-2 px-4 bg-blue-500 text-white rounded font-medium transition-colors';
+                btnManual.className = 'flex-1 py-2 px-4 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-medium transition-colors';
+                modoCamera.classList.remove('hidden');
+                modoManual.classList.add('hidden');
+            });
 
+            // Lógica de cámara QR
             startCamera.addEventListener('click', async function() {
                 try {
                     scannerStatus.textContent = 'Iniciando cámara...';
@@ -358,7 +483,7 @@
                 }
             });
 
-            stopCamera.addEventListener('click', function() { stopQrScanner(); });
+            stopCamera.addEventListener('click', stopQrScanner);
 
             function stopQrScanner() {
                 if (qrScanner) { qrScanner.stop(); qrScanner.destroy(); qrScanner = null; }
@@ -370,6 +495,7 @@
 
             if (currentMode === 'manual') npiInput.focus();
 
+            // Envío del formulario
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 let npiValue = npiInput.value.trim();
@@ -397,7 +523,7 @@
                         npiInput.value = '';
                         npiDetectado.classList.add('hidden');
                         if (currentMode === 'manual') npiInput.focus();
-                        actualizarSesionesActivas();
+                        actualizarSesionesActivas(); // Refrescar lista inmediatamente
                     } else {
                         mostrarError(data.message);
                     }
@@ -410,69 +536,16 @@
                 });
             });
 
-            function mostrarResultado(data) {
-                let html = '';
-                let bgClass = data.action === 'iniciar' ? 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800';
-                let iconClass = data.action === 'iniciar' ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400';
-                let icon = data.action === 'iniciar' ? '✅' : '🏁';
-                
-                html += `<div class="${bgClass} border rounded-lg p-4">`;
-                html += `<div class="flex items-start">`;
-                html += `<div class="text-2xl mr-3">${icon}</div>`;
-                html += `<div>`;
-                html += `<h4 class="font-medium ${iconClass}">${data.alumno}</h4>`;
-                html += `<p class="text-sm text-gray-600 dark:text-gray-300 mt-1">${data.message}</p>`;
-                if (data.action === 'iniciar') html += `<div class="text-sm text-gray-500 dark:text-gray-400 mt-2">Hora de inicio: ${data.hora_inicio}</div>`;
-                else html += `<div class="text-sm text-gray-500 dark:text-gray-400 mt-2">Duración: ${data.duracion}<br>${data.hora_inicio} - ${data.hora_fin}</div>`;
-                html += `</div></div></div>`;
-                
-                resultadoContent.innerHTML = html;
-                resultadoDiv.classList.remove('hidden');
-                setTimeout(() => { resultadoDiv.classList.add('hidden'); }, 8000);
-            }
+            // --- INICIAR CICLOS DE ACTUALIZACIÓN ---
+            
+            // 1. Cargar datos al inicio
+            actualizarSesionesActivas();
 
-            function mostrarError(mensaje) {
-                let html = `<div class="bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4"><div class="flex items-center"><div class="text-red-600 dark:text-red-400 text-xl mr-3">❌</div><div class="text-red-800 dark:text-red-300">${mensaje}</div></div></div>`;
-                resultadoContent.innerHTML = html;
-                resultadoDiv.classList.remove('hidden');
-                setTimeout(() => { resultadoDiv.classList.add('hidden'); }, 5000);
-            }
+            // 2. Cronómetro local (cada 1 segundo): Da el efecto "vivo" (00:01, 00:02...)
+            setInterval(tickCronometros, 1000);
 
-            function actualizarSesionesActivas() {
-                fetch('{{ route("sesiones.activas-ajax") }}')
-                    .then(response => response.json())
-                    .then(data => {
-                        document.getElementById('sesiones-activas-count').textContent = data.count;
-                        document.getElementById('ultima-actualizacion').textContent = new Date().toLocaleTimeString();
-                        const lista = document.getElementById('sesiones-activas-lista');
-                        let html = '';
-                        if (data.sesiones.length === 0) {
-                            html = `<div class="text-center text-gray-500 dark:text-gray-400 py-8"><div class="text-4xl mb-2">✈️</div><div>No hay sesiones activas</div><div class="text-sm">El simulador esta disponible</div></div>`;
-                        } else {
-                            data.sesiones.forEach(sesion => {
-                                html += `
-                                    <div class="border border-yellow-200 dark:border-yellow-700/50 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 transition-colors">
-                                        <div class="flex justify-between items-start">
-                                            <div class="flex-1">
-                                                <div class="font-medium text-gray-900 dark:text-gray-200">${sesion.alumno.nombre_completo}</div>
-                                                <div class="text-sm text-gray-600 dark:text-gray-400">NPI: <span class="font-mono">${sesion.alumno.npi}</span></div>
-                                                <div class="text-sm text-gray-600 dark:text-gray-400">Inicio: ${sesion.hora_inicio}</div>
-                                                <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">${sesion.actividad.substring(0, 60)}</div>
-                                            </div>
-                                            <div class="text-right flex flex-col items-end space-y-2">
-                                                <div class="text-sm font-medium text-yellow-700 dark:text-yellow-500">${sesion.tiempo_transcurrido}</div>
-                                                ${sesion.necesita_atencion ? '<div class="text-xs text-red-600 dark:text-red-400 font-medium">⚠️ Necesita atención</div>' : ''}
-                                                <button onclick="confirmarFinalizacion(${sesion.id}, '${sesion.alumno.nombre_completo}')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded-md font-medium transition-colors">🏁 Finalizar</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            });
-                        }
-                        lista.innerHTML = html;
-                    })
-                    .catch(error => console.error('Error actualizando sesiones:', error));
-            }
+            // 3. Sincronización con servidor (cada 60 segundos): Busca nuevas sesiones
+            setInterval(actualizarSesionesActivas, 60000);
         });
     </script>
 </x-app-layout>
