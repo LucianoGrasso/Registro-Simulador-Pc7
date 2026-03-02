@@ -177,16 +177,28 @@
             fetch('/reportes/resumen-rapido')
                 .then(response => response.json())
                 .then(data => {
-                    // Actualización segura de datos
-                    document.getElementById('total-sesiones').textContent = data.total_historico_sesiones || '0';
-                    document.getElementById('tiempo-promedio').textContent = (data.tiempo_promedio_global || 0) + ' min';
-                    document.getElementById('horas-totales').textContent = (data.horas_totales_global || 0) + ' h';
+                    // 1. Extraemos los valores o asignamos 0 si no existen
+                    const sesiones = data.total_historico_sesiones || 0;
+                    const tiempoPromedio = data.tiempo_promedio_global || 0;
+                    const horasTotales = data.horas_totales_global || 0;
+
+                    // 2. Actualizamos los elementos de texto (IDs del HTML)
+                    document.getElementById('total-sesiones').textContent = sesiones;
+                    document.getElementById('tiempo-promedio').textContent = tiempoPromedio + ' min';
+                    document.getElementById('horas-totales').textContent = horasTotales + ' h';
                     
-                    const horas = parseFloat(data.horas_totales_global || 0);
-                    const ahorro = horas * 650;
+                    // 3. Cálculo de Ahorro: Nos aseguramos de que 'horas' sea un número puro
+                    // Eliminamos cualquier carácter no numérico por si el backend envía el sufijo "h"
+                    const horasLimpias = parseFloat(String(horasTotales).replace(/[^0-9.]/g, '')) || 0;
+                    const ahorro = horasLimpias * 650;
+
+                    // 4. Mostramos el ahorro con formato de miles
                     document.getElementById('ahorro-total').textContent = '$ ' + ahorro.toLocaleString('es-CL');
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('ahorro-total').textContent = 'Error';
+                });
         }
 
         function mostrarExportacion() {

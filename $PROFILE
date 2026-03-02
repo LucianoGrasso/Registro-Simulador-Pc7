@@ -1,0 +1,7 @@
+function sail {
+    if (Test-Path "vendor/bin/sail") {
+        bash vendor/bin/sail @args
+    } else {
+        Write-Host "Error: No se encontró el binario de Sail en esta carpeta." -ForegroundColor Red
+    }
+}

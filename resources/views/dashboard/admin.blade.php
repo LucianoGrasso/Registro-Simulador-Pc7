@@ -5,11 +5,14 @@
                 {{ __('📊 Panel de Control General') }}
             </h2>
             <div class="flex space-x-2">
-                <a href="{{ route('reportes.index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition-colors">
+                <a href="{{ route('reportes.index') }}" class="bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow transition-colors">
                     📈 Reportes
                 </a>
-                <a href="{{ route('sesiones.scanner') }}" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded shadow transition-colors">
+                <a href="{{ route('sesiones.scanner') }}" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded shadow transition-colors">
                     🎓 Nueva Sesión
+                </a>
+                <a href="http://localhost:8081" class="bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow transition-colors">
+                    Iniciar IDU Genesys
                 </a>
             </div>
         </div>
