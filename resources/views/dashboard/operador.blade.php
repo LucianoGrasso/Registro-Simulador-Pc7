@@ -265,11 +265,12 @@
                     </div>
                 </div>
 
-                <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6 transition-colors">
-                    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">🏆 Ranking Pilotos (Mes)</h3>
-                    <div class="space-y-3">
-                        @foreach($alumnosActivos->take(5) as $index => $alumno)
-                            <div class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition border border-transparent hover:border-gray-100 dark:hover:border-gray-600">
+                <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6 transition-colors duration-300">
+                    <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">🏆 Top Pilotos (Mes)</h3>
+                    
+                    <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        @foreach($alumnosActivos as $index => $alumno)
+                            <div class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition">
                                 <div class="flex items-center">
                                     <div class="w-8 text-center font-bold text-gray-400 dark:text-gray-500">
                                         @if($index == 0) 🥇 @elseif($index == 1) 🥈 @elseif($index == 2) 🥉 @else #{{ $index + 1 }} @endif
@@ -280,8 +281,8 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                                        {{ $alumno->sesiones_count }}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                        Activo
                                     </span>
                                 </div>
                             </div>

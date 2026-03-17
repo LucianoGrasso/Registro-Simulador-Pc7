@@ -250,8 +250,9 @@
 
                 <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6 transition-colors duration-300">
                     <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">🏆 Top Pilotos (Mes)</h3>
-                    <div class="space-y-3">
-                        @foreach($alumnosActivos->take(6) as $index => $alumno)
+                    
+                    <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        @foreach($alumnosActivos as $index => $alumno)
                             <div class="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition">
                                 <div class="flex items-center">
                                     <div class="w-8 text-center font-bold text-gray-400 dark:text-gray-500">
@@ -271,7 +272,6 @@
                         @endforeach
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
