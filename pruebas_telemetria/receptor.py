@@ -8,6 +8,8 @@ import sys
 # --- CONFIGURACIÓN ---
 UDP_IP = "0.0.0.0"   # Escucha en todas las interfaces
 UDP_PORT = 49005     # Debe coincidir con X-Plane
+# Si estás usando Sail/Docker, desde tu PC la ruta suele ser:
+LARAVEL_URL = "http://127.0.0.1/api/telemetry"
 
 # ID de Sesión
 if len(sys.argv) < 2:

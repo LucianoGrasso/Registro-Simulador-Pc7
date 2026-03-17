@@ -8,6 +8,7 @@ use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\SoporteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VueloController;
+use Inertia\Inertia;
 
 // Página de bienvenida (redirige al login si no está autenticado)
 Route::get('/', function () {
@@ -54,6 +55,12 @@ Route::middleware('auth')->group(function () {
     // Visualizador de Vuelos (Telemetría)
     Route::get('/historial-vuelos', [VueloController::class, 'index'])->name('vuelos.index');
     Route::get('/vuelos/ver/{archivo}', [VueloController::class, 'show'])->name('vuelos.show');
+
+    // Pantalla de Instrumentos IDU Genesys
+    Route::get('/idu', function () {
+        // Forzamos a que esta ruta use el archivo de React
+            return Inertia::render('IDU/Welcome');
+    })->name('Idu.index');
 
 
     // ===== RUTAS SOLO PARA ADMINISTRADORES =====

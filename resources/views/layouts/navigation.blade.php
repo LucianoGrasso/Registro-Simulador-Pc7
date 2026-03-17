@@ -56,6 +56,16 @@
                     </x-nav-link>
 
                     <!-- Vuelos (Para todos) -->
+                    <x-nav-link :href="route('Idu.index')" :active="request()->routeIs('Idu.index') || request()->routeIs('Idu.show')"
+                                class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
+                                    {{ request()->routeIs('Idu.index') || request()->routeIs('Idu.show')
+                                        ? 'border-red-400 text-white' 
+                                        : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                        <span class="text-lg">✈️</span>
+                        <span>{{ __('IDU') }}</span>
+                    </x-nav-link>
+
+                    <!-- Vuelos (Para todos) -->
                     <x-nav-link :href="route('vuelos.index')" :active="request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')"
                                 class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
                                     {{ request()->routeIs('vuelos.index') || request()->routeIs('vuelos.show')
