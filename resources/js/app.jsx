@@ -1,5 +1,6 @@
+// resources/js/app.jsx
 import React from 'react';
-import './bootstrap';
+import './bootstrap'; // ← agrega esta línea
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 

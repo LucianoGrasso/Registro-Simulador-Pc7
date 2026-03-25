@@ -1,22 +1,21 @@
+// resources/js/app.js
 import './bootstrap';
 
-// Alpine.js (ya lo tienes)
+// Alpine.js
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
 Alpine.start();
 
-// Bootstrap para componentes interactivos
+// Bootstrap
 import 'bootstrap';
 
-// Chart.js para gráficos
+// Chart.js
 import Chart from 'chart.js/auto';
 window.Chart = Chart;
-
-// QR Scanner para leer códigos QR
-import QrScanner from 'qr-scanner';
-window.QrScanner = QrScanner;
-
-// Configuración global de Chart.js en español
 Chart.defaults.locale = 'es';
 Chart.defaults.plugins.tooltip.titleColor = '#fff';
 Chart.defaults.plugins.tooltip.bodyColor = '#fff';
+
+// QR Scanner
+import QrScanner from 'qr-scanner';
+window.QrScanner = QrScanner;

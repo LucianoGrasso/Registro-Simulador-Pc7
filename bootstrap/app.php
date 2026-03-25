@@ -13,9 +13,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Aquí agregas tu middleware personalizado
+        // Tu middleware personalizado original
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        ]);
+
+        // ---> NUEVO: Desactivar CSRF para que Python pueda enviar datos
+        $middleware->validateCsrfTokens(except: [
+            'telemetry', 
+            'api/telemetry',
+            'relay/*',
+            'api/relay/*'
         ]);
     })
     ->withMiddleware(function (Middleware $middleware) {
