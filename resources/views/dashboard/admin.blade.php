@@ -11,9 +11,6 @@
                 <a href="{{ route('sesiones.scanner') }}" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded shadow transition-colors">
                     🎓 Nueva Sesión
                 </a>
-                <a href="http://localhost:8081" class="bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow transition-colors">
-                    Iniciar IDU Genesys
-                </a>
             </div>
         </div>
     </x-slot>
