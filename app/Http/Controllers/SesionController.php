@@ -162,21 +162,19 @@ class SesionController extends Controller
 
     private function iniciarTelemetria($sesionId)
     {
-        // 1. RUTA PYTHON (Usamos C:\Windows\py.exe que suele ser el lanzador global)
-        $pythonExe = "C:\\Windows\\py.exe"; 
-        if (!file_exists($pythonExe)) {
-            // Ruta de respaldo genérica (intenta usar el PATH)
-            $pythonExe = "python";
-        }
-
-        // 2. Ruta Script
-        $scriptPath = base_path('pruebas_telemetria/receptor.py');
+        $scriptPath = base_path('telemetry_bridge/xplane_relay.py'); 
         
-        // 3. Lanzar en segundo plano (start /B)
-        $comando = "start /B \"\" \"$pythonExe\" \"$scriptPath\" " . $sesionId;
-        pclose(popen($comando, "r"));
+        // 1. EL ASESINO PREVENTIVO: Matamos cualquier xplane_relay.py que haya quedado pegado
+        exec("pkill -f xplane_relay.py 2>/dev/null");
         
-        Log::info("Telemetría UDP iniciada: $comando");
+        // Le damos 1 segundo al sistema operativo para liberar el puerto UDP
+        sleep(1); 
+        
+        // 2. Iniciamos el nuevo script limpio y atado a la nueva sesión
+        $comando = "nohup python3 {$scriptPath} {$sesionId} > /dev/null 2>&1 &";
+        exec($comando);
+        
+        Log::info("Telemetría UDP iniciada para sesión {$sesionId}: $comando");
     }
 
     private function detenerTelemetria($sesion)

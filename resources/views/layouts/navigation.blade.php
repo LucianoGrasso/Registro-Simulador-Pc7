@@ -61,7 +61,7 @@
                                     {{ request()->routeIs('Idu.index') || request()->routeIs('Idu.show')
                                         ? 'border-red-400 text-white' 
                                         : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
-                        <span class="text-lg">✈️</span>
+                        <span class="text-lg">🧭</span>
                         <span>{{ __('IDU') }}</span>
                     </x-nav-link>
 

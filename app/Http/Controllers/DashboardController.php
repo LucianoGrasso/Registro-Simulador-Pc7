@@ -105,7 +105,6 @@ class DashboardController extends Controller
                                 }])
                                 ->having('sesiones_count', '>', 0)
                                 ->orderBy('sesiones_count', 'desc')
-                                ->limit(5)
                                 ->get();
 
         $sesionesAtencion = Sesion::activas()

@@ -157,7 +157,6 @@
             // 🎨 RASTRO DE COLORES SUAVE (Heatmap)
             // ----------------------------------------------------------------
             
-            // a. Encontrar Altura Mínima y Máxima para calibrar
             let minAlt = Infinity;
             let maxAlt = -Infinity;
             rawData.forEach(p => {
@@ -165,35 +164,26 @@
                 if(p.alt > maxAlt) maxAlt = p.alt;
             });
 
-            // NUEVO: Mostrar los pies reales en la leyenda
             document.getElementById('legend-min').innerText = Math.round(minAlt) + ' ft';
             document.getElementById('legend-max').innerText = Math.round(maxAlt) + ' ft';
 
-            // b. Función COLOR SUAVE
             function getColor(alt) {
-                // Normalizar altura (0 a 1)
                 let pct = (alt - minAlt) / (maxAlt - minAlt || 1); 
-                
-                // HSL: 0 (Rojo) -> 120 (Verde)
-                // ANTES: Saturation 100%, Lightness 50% (Muy chillón)
-                // AHORA: Saturation 70%, Lightness 45% (Más sobrio y profesional)
                 let hue = pct * 120; 
                 return `hsl(${hue}, 70%, 45%)`; 
             }
 
-            // c. Dibujar segmentos
             for (let i = 0; i < rawData.length - 1; i++) {
                 const p1 = rawData[i];
                 const p2 = rawData[i+1];
                 
                 L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
                     color: getColor(p1.alt),
-                    weight: 4,      // Línea un poco más delgada (era 5)
-                    opacity: 0.8    // Un poco de transparencia
+                    weight: 4,
+                    opacity: 0.8
                 }).addTo(map);
             }
 
-            // Ajustar vista
             const fullLine = L.polyline(rawData.map(p => [p.lat, p.lon]), {opacity: 0});
             map.fitBounds(fullLine.getBounds(), {padding: [50, 50]});
 
@@ -211,10 +201,19 @@
                 zIndexOffset: 1000
             }).addTo(map);
 
-            // 3. LOGICA REPRODUCTOR
+            // 3. LÓGICA REPRODUCTOR REPARADA
             let isPlaying = false;
             let currentIndex = 0;
-            const totalSeconds = rawData.length - 1;
+            const totalFrames = rawData.length - 1; // Usamos "Frames" en lugar de segundos
+
+            let prevHdg = rawData[0] ? Math.round(rawData[0].hdg || 0) : 0;
+            let continuousHdg = prevHdg;
+            
+            // Calculamos la duración real usando los timestamps o dividiendo por 5 como respaldo
+            const hasTimestamps = rawData[0].ts !== undefined && rawData[totalFrames].ts !== undefined;
+            const totalSeconds = hasTimestamps 
+                ? Math.floor((rawData[totalFrames].ts - rawData[0].ts) / 1000) 
+                : Math.floor(totalFrames / 5);
             
             // Elementos DOM
             const elSpd = document.getElementById('live-spd');
@@ -233,7 +232,8 @@
             const iconPlay = document.getElementById('play-icon');
             const selSpeed = document.getElementById('speed-select');
 
-            slider.max = totalSeconds;
+            // El slider avanza por "cuadros", no por segundos, para que sea ultra suave
+            slider.max = totalFrames;
             
             function formatTime(seconds) {
                 const min = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -248,16 +248,33 @@
 
                 marker.setLatLng([data.lat, data.lon]);
                 
+                // --- LÓGICA MATEMÁTICA ANTI-GIRO ---
+                const currentHdg = Math.round(data.hdg || 0);
+                let diff = currentHdg - prevHdg;
+                
+                // Si el salto es mayor a media vuelta, es porque cruzamos el Norte (360 -> 0 o 0 -> 360)
+                if (diff > 180) diff -= 360;
+                if (diff < -180) diff += 360;
+                
+                continuousHdg += diff; // Sumamos o restamos de forma continua
+                prevHdg = currentHdg;  // Guardamos para el siguiente frame
+                // -----------------------------------
+
                 const planeImg = document.getElementById('plane-img');
                 if(planeImg) {
-                    planeImg.style.transform = `rotate(${data.hdg}deg)`;
+                    // Usamos continuousHdg en lugar de data.hdg
+                    planeImg.style.transform = `rotate(${continuousHdg}deg)`; 
                 }
 
                 const speed = data.spd !== undefined ? data.spd : (data.gs || 0);
                 elSpd.innerText = Math.round(speed);
                 elAlt.innerText = Math.round(data.alt);
-                elHdg.innerText = Math.round(data.hdg).toString().padStart(3, '0');
-                elHdgIcon.style.transform = `rotate(${data.hdg}deg)`;
+                
+                // El texto muestra el rumbo real (0-360)
+                elHdg.innerText = currentHdg.toString().padStart(3, '0');
+                
+                // Pero el icono usa la rotación continua (puede valer 361°, 400°, 720°, etc.)
+                elHdgIcon.style.transform = `rotate(${continuousHdg}deg)`;
 
                 const pitch = data.pitch || 0;
                 const roll = data.roll || 0;
@@ -269,16 +286,23 @@
                 barPitch.style.left = Math.max(0, Math.min(100, pitchPct)) + '%';
                 barRoll.style.left = Math.max(0, Math.min(100, rollPct)) + '%';
 
-                elCurrentTime.innerText = formatTime(index);
+                // Calcular el segundo exacto que se muestra en pantalla
+                const currentSeconds = hasTimestamps 
+                    ? Math.floor((data.ts - rawData[0].ts) / 1000)
+                    : Math.floor(index / 5);
+
+                elCurrentTime.innerText = formatTime(currentSeconds);
                 slider.value = index;
             }
 
             function loop() {
                 if (!isPlaying) return;
-                if (currentIndex < totalSeconds) {
+                if (currentIndex < totalFrames) {
                     currentIndex++;
                     updateDisplay(currentIndex);
-                    let delay = 1000 / parseInt(selSpeed.value); 
+                    
+                    // IMPORTANTE: 200ms de retraso en vez de 1000ms (5 FPS = Velocidad Normal)
+                    let delay = 200 / parseInt(selSpeed.value); 
                     setTimeout(loop, delay);
                 } else {
                     pause(); 
@@ -286,7 +310,7 @@
             }
 
             function play() {
-                if (currentIndex >= totalSeconds) currentIndex = 0; 
+                if (currentIndex >= totalFrames) currentIndex = 0; 
                 isPlaying = true;
                 iconPlay.innerText = '⏸';
                 loop();

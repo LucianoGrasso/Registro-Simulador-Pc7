@@ -177,23 +177,13 @@
             fetch('/reportes/resumen-rapido')
                 .then(response => response.json())
                 .then(data => {
-                    // 1. Extraemos los valores o asignamos 0 si no existen
-                    const sesiones = data.total_historico_sesiones || 0;
-                    const tiempoPromedio = data.tiempo_promedio_global || 0;
-                    const horasTotales = data.horas_totales_global || 0;
-
-                    // 2. Actualizamos los elementos de texto (IDs del HTML)
-                    document.getElementById('total-sesiones').textContent = sesiones;
-                    document.getElementById('tiempo-promedio').textContent = tiempoPromedio + ' min';
-                    document.getElementById('horas-totales').textContent = horasTotales + ' h';
+                    // Usamos EXACTAMENTE los nombres que manda tu función PHP original
+                    document.getElementById('total-sesiones').textContent = data.total_historico_sesiones || 0;
+                    document.getElementById('tiempo-promedio').textContent = (data.tiempo_promedio_global || 0) + ' min';
+                    document.getElementById('horas-totales').textContent = (data.horas_totales_global || 0) + ' h';
                     
-                    // 3. Cálculo de Ahorro: Nos aseguramos de que 'horas' sea un número puro
-                    // Eliminamos cualquier carácter no numérico por si el backend envía el sufijo "h"
-                    const horasLimpias = parseFloat(String(horasTotales).replace(/[^0-9.]/g, '')) || 0;
-                    const ahorro = horasLimpias * 650;
-
-                    // 4. Mostramos el ahorro con formato de miles
-                    document.getElementById('ahorro-total').textContent = '$ ' + ahorro.toLocaleString('es-CL');
+                    // Aquí pintamos directamente el ahorro que tu PHP ya calculó y formateó
+                    document.getElementById('ahorro-total').textContent = '$ ' + (data.ahorro_total_global || 0);
                 })
                 .catch(error => {
                     console.error('Error:', error);

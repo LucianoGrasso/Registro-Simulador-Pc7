@@ -42,7 +42,7 @@
                 <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg border-l-4 border-purple-500 transition-colors duration-300">
                     <div class="p-4 flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Alumnos Totales</p>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Alumnos</p>
                             <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $estadisticas['total_alumnos'] }}</p>
                         </div>
                         <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-full text-purple-500 text-xl">🎓</div>
