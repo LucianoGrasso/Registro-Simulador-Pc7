@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import Echo from 'laravel-echo';
 import { router } from '@inertiajs/react';
-import axios from 'axios';
 
 const TapeScale = ({ value, step, max, pixelsPerUnit, label }) => {
     // Calculamos el desplazamiento relativo al centro del viewport
@@ -75,57 +74,8 @@ export default function Welcome( dataReal ) {
     const [com1Freq, setCom1Freq] = useState(0.0);
     // -----------------------------------------------------
 
-    const [isRelayActive, setIsRelayActive] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    const toggleRelay = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.post('/api/relay/toggle', { 
-                active: !isRelayActive 
-            });
-            
-            if (response.status === 200) {
-                setIsRelayActive(!isRelayActive);
-                console.log("Estado del relay:", response.data.status);
-            }
-        } catch (error) {
-            console.error("Error en el interruptor:", error);
-            alert("No se pudo conectar con el servidor de telemetría");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        // --- NUEVA LÓGICA DE SINCRONIZACIÓN ---
-        const checkRelayStatus = async () => {
-            try {
-                const response = await axios.get('/api/relay/status');
-                if (response.data.active) {
-                    setIsRelayActive(true);
-                }
-            } catch (error) {
-                console.error("No se pudo verificar el estado inicial del relay", error);
-            }
-        };
 
-        const stopRelayOnClose = () => {
-            // Usamos navigator.sendBeacon para asegurar que la petición se envíe 
-            // incluso si la pestaña se está cerrando rápidamente.
-            const url = '/api/relay/toggle';
-            const data = JSON.stringify({ active: false });
-            const blob = new Blob([data], { type: 'application/json' });
-            navigator.sendBeacon(url, blob);
-        };
-
-        // Escuchar cuando el usuario cierra la pestaña o recarga
-        window.addEventListener('beforeunload', stopRelayOnClose);
-
-        checkRelayStatus();
-        // ---------------------------------------
-
-        
         if (window.Echo) {
             const channel = window.Echo.channel('telemetry-stream')
                 .listen('TelemetryUpdated', (e) => {
@@ -150,10 +100,6 @@ export default function Welcome( dataReal ) {
 
             return () => {
                 window.Echo.leave('telemetry-stream');
-                window.removeEventListener('beforeunload', stopRelayOnClose);
-                // Ejecutamos el apagado manual
-                axios.post('/api/relay/toggle', { active: false })
-                    .catch(err => console.error("Error apagando relay al salir", err));
             };
         } else {
             console.error("Laravel Echo no está inicializado. Verifica bootstrap.js");
@@ -177,19 +123,6 @@ export default function Welcome( dataReal ) {
                         >
                             ← VOLVER AL REGISTRO
                         </a>
-
-                        <button 
-                            onClick={toggleRelay}
-                            disabled={loading}
-                            className={`text-[10px] py-1 px-3 rounded border transition-all font-bold ${
-                                isRelayActive 
-                                ? 'bg-red-900/40 border-red-500 text-red-500 shadow-[0_0_10px_rgba(220,38,38,0.3)]' 
-                                : 'bg-zinc-800 border-zinc-600 text-zinc-400'
-                            } ${loading ? 'opacity-50 cursor-wait' : 'hover:scale-105'}`}
-                        >
-                            {loading ? 'WAIT...' : (isRelayActive ? '● STOP RELAY' : '▶ START RELAY')}
-                        </button>
-
                         <div className="text-xs text-[#00ff00] font-bold">COM1 <span className="text-white ml-2">{com1Freq.toFixed(2)}</span></div>
                     </div>
                     {/* AQUÍ MUESTRO LA FRECUENCIA REAL DE NAV1 */}
