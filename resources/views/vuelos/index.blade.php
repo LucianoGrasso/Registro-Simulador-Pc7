@@ -111,9 +111,15 @@
                                     </td>
 
                                     <td class="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-center">
-                                        <a href="{{ route('vuelos.show', $vuelo['archivo']) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition ease-in-out duration-150">
-                                            Ver Mapa 🗺️
-                                        </a>
+                                        <div class="flex justify-center gap-2">
+                                            <a href="{{ route('vuelos.show', $vuelo['archivo']) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition ease-in-out duration-150 shadow-sm">
+                                                Mapa 🗺️
+                                            </a>
+                                            
+                                            <a href="{{ route('idu.reproductor', $vuelo['archivo']) }}" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none transition ease-in-out duration-150 shadow-sm font-bold">
+                                                IDU ▶️
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach

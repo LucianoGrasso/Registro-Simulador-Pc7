@@ -62,6 +62,25 @@ Route::middleware('auth')->group(function () {
             return Inertia::render('IDU/Welcome');
     })->name('Idu.index');
 
+    // Pantalla del Reproductor IDU (REPLAY)
+    Route::get('/idu/reproductor/{archivo}', function ($archivo) {
+        // Buscamos el archivo en la carpeta public/vuelos
+        $rutaCompleta = public_path('vuelos/' . $archivo);
+
+        // Si el archivo no existe, mostramos error 404
+        if (!file_exists($rutaCompleta)) {
+            abort(404, 'El archivo de vuelo no existe en el servidor.');
+        }
+
+        // Leemos el JSON y lo convertimos a un arreglo de PHP
+        $contenido = file_get_contents($rutaCompleta);
+        $datosVuelo = json_decode($contenido, true);
+
+        // Le inyectamos los datos a la vista de React
+        return Inertia::render('IDU/Reproductor', [
+            'historialVuelo' => $datosVuelo
+        ]);
+    })->name('idu.reproductor');
 
     // ===== RUTAS SOLO PARA ADMINISTRADORES =====
     

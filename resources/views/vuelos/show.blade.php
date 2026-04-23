@@ -188,6 +188,37 @@
             map.fitBounds(fullLine.getBounds(), {padding: [50, 50]});
 
             // ----------------------------------------------------------------
+            // 🏁 MARCADORES DE INICIO Y FIN (NUEVO)
+            // ----------------------------------------------------------------
+            const startPoint = rawData[0];
+            const endPoint = rawData[rawData.length - 1];
+
+            // Icono Verde Circular para el Inicio
+            const startIcon = L.divIcon({
+                html: '<div class="w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow-[0_0_5px_rgba(0,0,0,0.5)]"></div>',
+                className: '',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            // Icono Rojo Cuadrado para el Final
+            const endIcon = L.divIcon({
+                html: '<div class="w-4 h-4 bg-red-500 border-2 border-white rounded-[2px] shadow-[0_0_5px_rgba(0,0,0,0.5)]"></div>',
+                className: '',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            // Agregamos los marcadores al mapa con etiquetas (Tooltips)
+            L.marker([startPoint.lat, startPoint.lon], { icon: startIcon })
+                .addTo(map)
+                .bindTooltip('<b class="text-green-600">INICIO</b>', { direction: 'right', className: 'text-xs' });
+
+            L.marker([endPoint.lat, endPoint.lon], { icon: endIcon })
+                .addTo(map)
+                .bindTooltip('<b class="text-red-600">FIN</b>', { direction: 'left', className: 'text-xs' });
+
+            // ----------------------------------------------------------------
             // ✈️ MARCADOR DEL AVIÓN
             // ----------------------------------------------------------------
             const planeIcon = L.divIcon({
