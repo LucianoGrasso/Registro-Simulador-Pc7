@@ -6,8 +6,9 @@ use App\Http\Controllers\SesionController;
 use App\Http\Controllers\AlumnoController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\SoporteController;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\InstructorController;
 use App\Http\Controllers\VueloController;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // Página de bienvenida (redirige al login si no está autenticado)
@@ -134,6 +135,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/soporte/{soporte}', [SoporteController::class, 'show'])->name('soporte.show');
         Route::patch('/admin/soporte/{soporte}/estado', [SoporteController::class, 'updateEstado'])->name('soporte.update-estado');
         Route::delete('/admin/soporte/{soporte}', [SoporteController::class, 'destroy'])->name('soporte.destroy');
+
+        // CRUD completo de instructores
+        Route::resource('instructores', InstructorController::class)->except(['create', 'show', 'edit', 'destroy']);
+        Route::patch('/instructores/{instructor}/toggle-estado', [InstructorController::class, 'toggleEstado'])->name('instructores.toggle-estado');
     });
 });
 

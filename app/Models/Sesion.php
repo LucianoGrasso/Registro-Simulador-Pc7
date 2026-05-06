@@ -26,6 +26,8 @@ class Sesion extends Model
         'detalles',
         'observaciones',
         'archivo_vuelo',
+        'es_instruccion',
+        'instructor_npi',
     ];
 
     protected $casts = [

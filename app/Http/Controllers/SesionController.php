@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sesion;
 use App\Models\Alumno;
+use App\Models\Instructor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -46,7 +47,13 @@ class SesionController extends Controller
 
     public function procesarQR(Request $request)
     {
-        $request->validate(['npi' => 'required', 'actividad' => 'required']);
+        // 1. Añadimos las validaciones para el instructor
+        $request->validate([
+            'npi' => 'required', 
+            'actividad' => 'required',
+            'es_instruccion' => 'nullable',
+            'instructor_npi' => 'nullable|string'
+        ]);
 
         try {
             $npiLimpio = str_replace(['-', ' '], '', $request->npi);
@@ -57,6 +64,25 @@ class SesionController extends Controller
             })->where('is_active', true)->first();
             
             if (!$alumno) return response()->json(['success' => false, 'message' => 'Alumno no encontrado']);
+
+            // --- 2. LÓGICA DE INSTRUCTOR (NUEVO) ---
+            // '1' es el valor que mandamos desde JavaScript si el switch está encendido
+            $esInstruccion = $request->input('es_instruccion') === '1';
+            $instructorNpi = $request->input('instructor_npi');
+            $instructorModel = null;
+
+            if ($esInstruccion) {
+                if (empty($instructorNpi)) {
+                    return response()->json(['success' => false, 'message' => 'Por favor ingrese el NPI del instructor']);
+                }
+                
+                $instructorModel = Instructor::where('npi', $instructorNpi)->where('activo', true)->first();
+                
+                if (!$instructorModel) {
+                    return response()->json(['success' => false, 'message' => 'El NPI del instructor no existe o no está activo en el sistema.']);
+                }
+            }
+            // ----------------------------------------
 
             DB::beginTransaction();
             try {
@@ -89,9 +115,17 @@ class SesionController extends Controller
                         DB::rollback(); return response()->json(['success' => false, 'message' => 'Ya tiene sesión activa']);
                     }
                     
+                    // 3. AÑADIMOS LOS CAMPOS AL CREATE (NUEVO)
                     $sesion = Sesion::create([
-                        'alumno_id' => $alumno->id, 'npi' => $request->npi, 'fecha' => today(),
-                        'hora_inicio' => now(), 'actividad' => $request->actividad, 'estado' => 'activa', 'usuario_inicio_id' => Auth::id()
+                        'alumno_id' => $alumno->id, 
+                        'npi' => $request->npi, 
+                        'fecha' => today(),
+                        'hora_inicio' => now(), 
+                        'actividad' => $request->actividad, 
+                        'estado' => 'activa', 
+                        'usuario_inicio_id' => Auth::id(),
+                        'es_instruccion' => $esInstruccion,
+                        'instructor_npi' => $instructorModel ? $instructorModel->npi : null
                     ]);
 
                     // INICIAR TELEMETRÍA (Protegido)
@@ -99,9 +133,15 @@ class SesionController extends Controller
                     catch (\Exception $e) { Log::error("Fallo start telemetria QR: " . $e->getMessage()); }
                     
                     DB::commit();
+                    
+                    // 4. Mensaje personalizado para sesiones de instrucción
+                    $mensajeFelicidad = $esInstruccion 
+                        ? 'Vuelo de INSTRUCCIÓN iniciado con: ' . $instructorModel->grado_nombre 
+                        : 'Sesión iniciada';
+
                     return response()->json([
                         'success' => true, 'action' => 'iniciar', 
-                        'message' => 'Sesión iniciada',
+                        'message' => $mensajeFelicidad,
                         'alumno' => $alumno->nombre_completo,
                         'hora_inicio' => $sesion->hora_inicio->format('H:i'),
                         'npi' => $alumno->npi

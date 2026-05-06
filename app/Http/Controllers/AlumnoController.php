@@ -100,6 +100,8 @@ class AlumnoController extends Controller
             'total_sesiones' => $alumno->sesiones->count(),
             'sesiones_activas' => $alumno->sesionesActivas->count(),
             'tiempo_total_minutos' => $alumno->sesiones->where('estado', 'finalizada')->sum('duracion_minutos'),
+            'sesiones_instruccion' => $alumno->sesiones->where('es_instruccion', true)->count(),
+            'tiempo_instruccion_minutos' => $alumno->sesiones->where('estado', 'finalizada')->where('es_instruccion', true)->sum('duracion_minutos'),
             'promedio_duracion' => $alumno->sesiones->where('estado', 'finalizada')->avg('duracion_minutos'),
             'ultima_sesion' => $alumno->sesiones->first(),
         ];

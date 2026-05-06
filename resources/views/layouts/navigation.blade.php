@@ -8,23 +8,23 @@
                     <div class="relative">
                         <!-- Logo PC-7 -->
                         <img src="{{ asset('images/LogoPC7.png') }}" 
-                             alt="Simulador PC-7" 
-                             class="relative w-26 h-20 object-contain animate-bounce-slow">
+                            alt="Simulador PC-7" 
+                            class="relative w-26 h-20 object-contain animate-bounce-slow">
                     </div>
                     
                     <div class="ml-4">
                         <h1 class="font-black text-3xl flex flex-col leading-tight">
                             <span class="bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent 
-                                         drop-shadow-[0_1px_2px_rgba(239,68,68,0.8)] 
-                                         group-hover:drop-shadow-[0_2px_4px_rgba(239,68,68,0.9)]
-                                         transition-all duration-300
-                                         tracking-wide">
+                                        drop-shadow-[0_1px_2px_rgba(239,68,68,0.8)] 
+                                        group-hover:drop-shadow-[0_2px_4px_rgba(239,68,68,0.9)]
+                                        transition-all duration-300
+                                        tracking-wide">
                                 SIMULADOR
                             </span>
                             <span class="text-white text-xl font-bold tracking-widest 
-                                         group-hover:text-red-400 
-                                         transition-colors duration-300
-                                         drop-shadow-md">
+                                        group-hover:text-red-400 
+                                        transition-colors duration-300
+                                        drop-shadow-md">
                                 PC-7
                             </span>
                         </h1>
@@ -39,18 +39,18 @@
                     <!-- Dashboard -->
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" 
                         class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                               {{ request()->routeIs('dashboard') 
-                                   ? 'border-red-400 text-white' 
-                                   : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                            {{ request()->routeIs('dashboard') 
+                                ? 'border-red-400 text-white' 
+                                : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                         <span class="text-lg">🏠</span>
                         <span>{{ __('Dashboard') }}</span>
                     </x-nav-link>
 
                     <x-nav-link :href="route('sesiones.scanner')" :active="request()->routeIs('sesiones.scanner')"
                         class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                               {{ request()->routeIs('sesiones.scanner') 
-                                   ? 'border-red-400 text-white' 
-                                   : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                            {{ request()->routeIs('sesiones.scanner') 
+                                ? 'border-red-400 text-white' 
+                                : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                         <span class="text-lg">📱</span>
                         <span>{{ __('Scanner') }}</span>
                     </x-nav-link>
@@ -79,19 +79,29 @@
                         <!-- Alumnos -->
                         <x-nav-link :href="route('alumnos.index')" :active="request()->routeIs('alumnos.*')"
                             class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                                   {{ request()->routeIs('alumnos.*') 
-                                       ? 'border-red-400 text-white' 
-                                       : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                                {{ request()->routeIs('alumnos.*') 
+                                    ? 'border-red-400 text-white' 
+                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                             <span class="text-lg">🎓</span>
                             <span>{{ __('Alumnos') }}</span>
+                        </x-nav-link>
+
+                        <!-- Instructores -->
+                        <x-nav-link :href="route('instructores.index')" :active="request()->routeIs('instructores.*')"
+                            class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
+                                {{ request()->routeIs('instructores.*') 
+                                    ? 'border-red-400 text-white'
+                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                            <span class="text-lg">👨‍✈️</span>
+                            <span>{{ __('Instructores') }}</span>
                         </x-nav-link>
 
                         <!-- NUEVO: Sesiones (Admin) -->
                         <x-nav-link :href="route('sesiones.index')" :active="request()->routeIs('sesiones.index') || request()->routeIs('sesiones.edit')"
                             class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                                   {{ request()->routeIs('sesiones.index') || request()->routeIs('sesiones.edit')
-                                       ? 'border-red-400 text-white' 
-                                       : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                                {{ request()->routeIs('sesiones.index') || request()->routeIs('sesiones.edit')
+                                    ? 'border-red-400 text-white' 
+                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                             <span class="text-lg">📋</span>
                             <span>{{ __('Sesiones') }}</span>
                         </x-nav-link>
@@ -99,32 +109,32 @@
                         <!-- Reportes -->
                         <x-nav-link :href="route('reportes.index')" :active="request()->routeIs('reportes.*')"
                             class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                                   {{ request()->routeIs('reportes.*') 
-                                       ? 'border-red-400 text-white' 
-                                       : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                                {{ request()->routeIs('reportes.*') 
+                                    ? 'border-red-400 text-white' 
+                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                             <span class="text-lg">📊</span>
                             <span>{{ __('Reportes') }}</span>
                         </x-nav-link>
 
                         <!-- Soporte -->
-                        <x-nav-link :href="route('soporte.index')" :active="request()->routeIs('soporte.*')"
+                        <!-- <x-nav-link :href="route('soporte.index')" :active="request()->routeIs('soporte.*')"
                             class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                                   {{ request()->routeIs('soporte.*') 
-                                       ? 'border-red-400 text-white' 
-                                       : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                                {{ request()->routeIs('soporte.*') 
+                                    ? 'border-red-400 text-white' 
+                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                             <span class="text-lg">🛠️</span>
                             <span>{{ __('Soporte') }}</span>
-                        </x-nav-link>
+                        </x-nav-link> -->
                     @else
                         <!-- Soporte operadores -->
-                        <x-nav-link :href="route('soporte.create')" :active="request()->routeIs('soporte.*')"
+                        <!-- <x-nav-link :href="route('soporte.create')" :active="request()->routeIs('soporte.*')"
                             class="inline-flex items-center gap-2 px-3 pt-1 pb-2 border-b-2 text-base font-semibold leading-5 transition duration-150 ease-in-out focus:outline-none
-                                   {{ request()->routeIs('soporte.*') 
-                                       ? 'border-red-400 text-white' 
-                                       : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
+                                {{ request()->routeIs('soporte.*') 
+                                    ? 'border-red-400 text-white' 
+                                    : 'border-transparent text-white hover:text-gray-200 hover:border-gray-300' }}">
                             <span class="text-lg">🛠️</span>
                             <span>{{ __('Soporte') }}</span>
-                        </x-nav-link>
+                        </x-nav-link> -->
                     @endif
                 </div>
             </div>
@@ -150,7 +160,7 @@
                     </span>
                 </div>
 
-                <x-dropdown align="right" width="48">
+                <x-dropdown allign="right" width="48">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center px-3 py-2 !border !border-red-400 text-sm leading-4 font-medium rounded-md text-white bg-gray-700 hover:bg-gray-600 focus:outline-none transition ease-in-out duration-150">
                             <div>{{ Auth::user()->name }}</div>

@@ -107,7 +107,27 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
+                            <div class="mb-6 border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 transition-colors">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">Vuelo de Instrucción Oficial</h4>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">Activar solo si un instructor certifica la sesión.</p>
+                                    </div>
+                                    
+                                    <label for="es_instruccion" class="flex items-center cursor-pointer relative">
+                                        <input type="checkbox" id="es_instruccion" name="es_instruccion" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 transition-colors"></div>
+                                    </label>
+                                </div>
+
+                                <div id="campo_instructor" class="mt-4 hidden transition-all duration-300">
+                                    <label for="instructor_npi" class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">NPI del Instructor</label>
+                                    <input type="text" name="instructor_npi" id="instructor_npi" placeholder="Ingresa el NPI del Instructor" 
+                                           class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white font-mono transition-colors" autocomplete="off">
+                                </div>
+                            </div>
+
                             <div class="mb-6">
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                     Tipo de Práctica
@@ -368,6 +388,22 @@
             });
         }
 
+        // Elementos del Instructor
+            const toggleInstruccion = document.getElementById('es_instruccion');
+            const campoInstructor = document.getElementById('campo_instructor');
+            const inputInstructor = document.getElementById('instructor_npi');
+
+            // Mostrar/Ocultar campo de instructor
+            toggleInstruccion.addEventListener('change', function() {
+                if (this.checked) {
+                    campoInstructor.classList.remove('hidden');
+                    inputInstructor.focus();
+                } else {
+                    campoInstructor.classList.add('hidden');
+                    inputInstructor.value = '';
+                }
+            });
+
         // === UTILIDADES DE UI ===
 
         function mostrarResultadoFinalizacion(data) {
@@ -498,8 +534,20 @@
             // Envío del formulario
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
+                
                 let npiValue = npiInput.value.trim();
                 if (!npiValue) { mostrarError('Por favor ingresa o escanea el NPI'); return; }
+                
+                // --- NUEVA LÓGICA DE INSTRUCTOR ---
+                let esInstruccionVal = toggleInstruccion.checked ? '1' : '0';
+                let instructorNpiValue = inputInstructor.value.trim();
+                
+                if (toggleInstruccion.checked && !instructorNpiValue) { 
+                    mostrarError('Por favor ingresa el NPI del instructor'); 
+                    return; 
+                }
+                // ----------------------------------
+
                 const checkboxes = document.querySelectorAll('input[name="actividades[]"]:checked');
                 if (checkboxes.length === 0) { mostrarError('Selecciona al menos una práctica'); return; }
                 const actividades = Array.from(checkboxes).map(cb => cb.value);
@@ -513,6 +561,10 @@
                 formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
                 formData.append('npi', npiValue);
                 formData.append('actividad', actividadTexto);
+                
+                // --- ENVIAMOS LOS DATOS NUEVOS ---
+                formData.append('es_instruccion', esInstruccionVal);
+                formData.append('instructor_npi', instructorNpiValue);
                 
                 fetch('{{ route("sesiones.procesar-qr") }}', { method: 'POST', body: formData })
                 .then(response => response.json())
