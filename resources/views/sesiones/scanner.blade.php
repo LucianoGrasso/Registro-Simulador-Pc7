@@ -108,11 +108,11 @@
                                 </div>
                             </div>
 
-                            <div class="mb-6 border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 transition-colors">
+                            <div class="mt-4 mb-6 border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 transition-colors">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">Vuelo de Instrucción Oficial</h4>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">Activar solo si un instructor certifica la sesión.</p>
+                                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-tight">¿Es un Vuelo de Instrucción Oficial?</h4>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">Activa esta opción solo si esta con un instructor.</p>
                                     </div>
                                     
                                     <label for="es_instruccion" class="flex items-center cursor-pointer relative">
@@ -121,10 +121,31 @@
                                     </label>
                                 </div>
 
-                                <div id="campo_instructor" class="mt-4 hidden transition-all duration-300">
-                                    <label for="instructor_npi" class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">NPI del Instructor</label>
-                                    <input type="text" name="instructor_npi" id="instructor_npi" placeholder="Ingresa el NPI del Instructor" 
-                                           class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white font-mono transition-colors" autocomplete="off">
+                                <div id="campo_instructor" class="mt-4 hidden space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="instructor_npi" class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">NPI del Instructor</label>
+                                            <input type="text" name="instructor_npi" id="instructor_npi" placeholder="Ej: 123456-7" 
+                                                class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white font-mono uppercase transition-colors" autocomplete="off">
+                                        </div>
+                                        
+                                        <div>
+                                            <label for="codigo_prueba" class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Código de Prueba</label>
+                                            <input type="text" name="codigo_prueba" id="codigo_prueba" list="codigos_syllabus" placeholder="Ej: SIB-1D" 
+                                                class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white font-mono uppercase transition-colors" autocomplete="off">
+                                            
+                                            <datalist id="codigos_syllabus">
+                                                <option value="SIB-1D">
+                                                <option value="SIM-2D">
+                                                <option value="SRI-3D">
+                                                <option value="SPS-4D">
+                                            </datalist>
+                                        </div>
+                                        <div>
+                                            <label for="instructor_pin" class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">PIN Secreto</label>
+                                            <input type="password" name="instructor_pin" id="instructor_pin" placeholder="****" maxlength="4" class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-red-300 dark:border-red-600/50 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-white font-mono tracking-widest text-center transition-colors" autocomplete="off">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -392,6 +413,7 @@
             const toggleInstruccion = document.getElementById('es_instruccion');
             const campoInstructor = document.getElementById('campo_instructor');
             const inputInstructor = document.getElementById('instructor_npi');
+            const inputCodigo = document.getElementById('codigo_prueba');
 
             // Mostrar/Ocultar campo de instructor
             toggleInstruccion.addEventListener('change', function() {
@@ -401,6 +423,7 @@
                 } else {
                     campoInstructor.classList.add('hidden');
                     inputInstructor.value = '';
+                    inputCodigo.value = '';
                 }
             });
 
@@ -563,8 +586,10 @@
                 formData.append('actividad', actividadTexto);
                 
                 // --- ENVIAMOS LOS DATOS NUEVOS ---
-                formData.append('es_instruccion', esInstruccionVal);
-                formData.append('instructor_npi', instructorNpiValue);
+                formData.append('es_instruccion', toggleInstruccion.checked ? '1' : '0');
+                formData.append('instructor_npi', inputInstructor.value.trim());
+                formData.append('codigo_prueba', inputCodigo.value.trim());
+                formData.append('instructor_pin', document.getElementById('instructor_pin').value.trim());
                 
                 fetch('{{ route("sesiones.procesar-qr") }}', { method: 'POST', body: formData })
                 .then(response => response.json())

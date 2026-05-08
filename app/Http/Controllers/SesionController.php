@@ -52,7 +52,9 @@ class SesionController extends Controller
             'npi' => 'required', 
             'actividad' => 'required',
             'es_instruccion' => 'nullable',
-            'instructor_npi' => 'nullable|string'
+            'instructor_npi' => 'nullable|string',
+            'codigo_prueba' => 'nullable|string',
+            'instructor_pin' => 'nullable|digits:4'
         ]);
 
         try {
@@ -80,6 +82,10 @@ class SesionController extends Controller
                 
                 if (!$instructorModel) {
                     return response()->json(['success' => false, 'message' => 'El NPI del instructor no existe o no está activo en el sistema.']);
+                }
+
+                if ($instructorModel->pin !== $request->input('instructor_pin')) {
+                    return response()->json(['success' => false, 'message' => 'El PIN secreto del instructor es INCORRECTO. Firma digital denegada.']);
                 }
             }
             // ----------------------------------------
@@ -125,7 +131,8 @@ class SesionController extends Controller
                         'estado' => 'activa', 
                         'usuario_inicio_id' => Auth::id(),
                         'es_instruccion' => $esInstruccion,
-                        'instructor_npi' => $instructorModel ? $instructorModel->npi : null
+                        'instructor_npi' => $instructorModel ? $instructorModel->npi : null,
+                        'codigo_prueba' => $esInstruccion ? $request->input('codigo_prueba') : null
                     ]);
 
                     // INICIAR TELEMETRÍA (Protegido)

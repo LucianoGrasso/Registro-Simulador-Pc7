@@ -40,13 +40,17 @@
                 </div>
                 <form method="POST" action="{{ route('instructores.store') }}" class="flex flex-wrap gap-4 items-end">
                     @csrf
-                    <div class="flex-1 min-w-[250px]">
+                    <div class="flex-1 min-w-[200px]">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NPI</label>
-                        <input type="text" name="npi" required placeholder="Ej: 123456-7" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono">
+                        <input type="text" name="npi" required placeholder="Ej: 123456-7" maxlength="8" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono">
+                    </div>
+                    <div class="w-32">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PIN (4 dígitos)</label>
+                        <input type="text" name="pin" required placeholder="1234" maxlength="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-center">
                     </div>
                     <div class="flex-[2] min-w-[250px]">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grado y Nombre Completo</label>
-                        <input type="text" name="grado_nombre" required placeholder="Ej: T1 (NV) Juan Pérez" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <input type="text" name="grado_nombre" required placeholder="Ej: T1 (NV) Juan Pérez" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition-colors h-[42px]">
                         Guardar
@@ -138,7 +142,7 @@
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Instructor</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">NPI</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estadísticas</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sesiones</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Estado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                             </tr>
@@ -168,22 +172,11 @@
                                         </span>
                                     </td>
 
-                                    {{-- Estadísticas (Sesiones y Horas) --}}
+                                    {{-- Sesiones (Simplificado) --}}
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
-                                        <div class="flex items-center space-x-4">
-                                            <div>
-                                                <div class="font-medium dark:text-white">{{ $instructor->sesiones_count ?? 0 }}</div>
-                                                <div class="text-xs text-gray-500 dark:text-gray-400">Sesiones</div>
-                                            </div>
-                                            @php
-                                                $minutosTotales = $instructor->total_minutos ?? 0;
-                                                $horas = floor($minutosTotales / 60);
-                                                $minutos = $minutosTotales % 60;
-                                            @endphp
-                                            <div class="text-blue-600 dark:text-blue-400 font-medium">
-                                                <div>{{ str_pad($horas, 2, '0', STR_PAD_LEFT) }}:{{ str_pad($minutos, 2, '0', STR_PAD_LEFT) }}</div>
-                                                <div class="text-xs text-gray-500 dark:text-gray-400">Horas acumuladas</div>
-                                            </div>
+                                        <div>
+                                            <div class="font-medium dark:text-white">{{ $instructor->sesiones_count ?? 0 }}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400">Totales</div>
                                         </div>
                                     </td>
 
@@ -203,6 +196,29 @@
                                     {{-- Acciones (Botones Style) --}}
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center space-x-2">
+                                            
+                                            {{-- Botón Ver Detalle --}}
+                                            <a href="{{ route('instructores.show', $instructor->id) }}" 
+                                               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border transition-colors bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/40" 
+                                               title="Ver perfil del instructor">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                </svg>
+                                                Ver
+                                            </a>
+
+                                            {{-- Botón Editar  --}}
+                                            <a href="{{ route('instructores.edit', $instructor->id) }}" 
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border transition-colors bg-white text-blue-700 border-blue-200 hover:bg-blue-50 dark:bg-gray-700 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-gray-600" 
+                                            title="Editar instructor">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                                Editar
+                                            </a>
+
+                                            {{-- Botón Pausar/Activar --}}
                                             <form method="POST" action="{{ route('instructores.toggle-estado', $instructor->id) }}" class="inline">
                                                 @csrf
                                                 @method('PATCH')

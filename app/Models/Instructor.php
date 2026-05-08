@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Instructor extends Model
 {
     protected $table = 'instructores';
-    protected $fillable = ['npi', 'grado_nombre', 'activo'];
+    protected $fillable = ['npi', 'grado_nombre', 'activo', 'pin'];
     public function sesiones()
     {
         // Un instructor tiene muchas sesiones, vinculadas por la columna 'npi'

@@ -85,8 +85,9 @@
                                         Estado
                                     </th>
                                     
+                                    {{-- Nombre de la columna actualizado --}}
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Actividad
+                                        Prueba / Actividad
                                     </th>
                                 </tr>
                             </thead>
@@ -145,9 +146,17 @@
                                             @endif
                                         </td>
 
+                                        {{-- Columna actualizada para mostrar el código si existe --}}
                                         <td class="px-3 py-4">
-                                            <div class="text-sm text-gray-900 dark:text-gray-300" title="{{ $sesion->actividad }}">
-                                                {{ Str::limit($sesion->actividad, 50, '...') }}
+                                            <div class="flex items-center gap-2">
+                                                @if($sesion->codigo_prueba)
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold font-mono bg-indigo-100 text-indigo-800 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800 transition-colors shrink-0">
+                                                        {{ $sesion->codigo_prueba }}
+                                                    </span>
+                                                @endif
+                                                <div class="text-sm text-gray-900 dark:text-gray-300 truncate" title="{{ $sesion->actividad }}">
+                                                    {{ Str::limit($sesion->actividad, 50, '...') }}
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>

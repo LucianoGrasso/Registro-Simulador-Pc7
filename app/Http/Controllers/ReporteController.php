@@ -31,31 +31,38 @@ class ReporteController extends Controller
      */
     public function resumenRapido()
     {
-        // 1. Total Histórico de Sesiones (Todas las que existen)
+        // 1. Total Histórico de Sesiones (Todas)
         $totalSesiones = Sesion::count();
 
-        // 2. Tiempo Promedio Global (De todas las sesiones finalizadas históricamente)
-        $tiempoPromedio = Sesion::where('estado', 'finalizada')
-                                ->avg('duracion_minutos');
-
-        // 3. Horas Totales Históricas (Suma de todos los minutos / 60)
-        $totalMinutos = Sesion::where('estado', 'finalizada')
-                              ->sum('duracion_minutos');
-        
+        // 2. Horas Totales Históricas (Práctica + Instrucción)
+        $totalMinutos = Sesion::where('estado', 'finalizada')->sum('duracion_minutos');
         $horasTotales = $totalMinutos > 0 ? round($totalMinutos / 60, 1) : 0;
 
+        // 3. Tiempo Promedio Global
+        $tiempoPromedio = Sesion::where('estado', 'finalizada')->avg('duracion_minutos');
+
         // 4. Ahorro Total Histórico (Horas * 650 USD)
-        // Usamos las horas totales calculadas arriba
         $ahorroTotal = $horasTotales * 650;
 
+        // --- NUEVO: ESTADÍSTICAS OFICIALES DE INSTRUCCIÓN ---
+        $totalInstruccion = Sesion::where('es_instruccion', true)->count();
+        
+        $minutosInstruccion = Sesion::where('estado', 'finalizada')
+                                    ->where('es_instruccion', true)
+                                    ->sum('duracion_minutos');
+                                    
+        $horasInstruccion = $minutosInstruccion > 0 ? round($minutosInstruccion / 60, 1) : 0;
+        // ----------------------------------------------------
+
         $data = [
-            'total_historico_sesiones' => number_format($totalSesiones, 0, ',', '.'),
-            'tiempo_promedio_global'   => round($tiempoPromedio ?? 0, 0), // Redondeamos a minutos enteros
-            'horas_totales_global'     => number_format($horasTotales, 1, ',', '.'), // 1 decimal (ej: 150.5 h)
-            'ahorro_total_global'      => number_format($ahorroTotal, 0, ',', '.'), // Formato dinero (ej: 1.500.000)
+            'total_historico_sesiones'   => number_format($totalSesiones, 0, ',', '.'),
+            'tiempo_promedio_global'     => round($tiempoPromedio ?? 0, 0),
+            'horas_totales_global'       => number_format($horasTotales, 1, ',', '.'),
+            'ahorro_total_global'        => number_format($ahorroTotal, 0, ',', '.'),
             
-            // Mantenemos estos por si los usas en otro lado, pero los globales son los de arriba
-            'sesiones_hoy' => Sesion::whereDate('fecha', today())->count(),
+            // Nuevos datos que enviaremos a la vista
+            'total_sesiones_instruccion' => number_format($totalInstruccion, 0, ',', '.'),
+            'horas_instruccion_global'   => number_format($horasInstruccion, 1, ',', '.'),
         ];
 
         return response()->json($data);

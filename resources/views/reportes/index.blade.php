@@ -13,9 +13,7 @@
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Seleccione el tipo de reporte</h3>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        
-                        <a href="{{ route('reportes.mensual') }}" 
-                           class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-blue-400 dark:hover:border-blue-500">
+                        <a href="{{ route('reportes.mensual') }}" class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-blue-400 dark:hover:border-blue-500">
                             <div class="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                             </div>
@@ -23,8 +21,7 @@
                             <div class="text-sm text-gray-500 dark:text-gray-400">Análisis detallado por mes</div>
                         </a>
                         
-                        <a href="{{ route('reportes.anual') }}" 
-                           class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500">
+                        <a href="{{ route('reportes.anual') }}" class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-purple-400 dark:hover:border-purple-500">
                             <div class="w-12 h-12 mx-auto bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                             </div>
@@ -32,15 +29,13 @@
                             <div class="text-sm text-gray-500 dark:text-gray-400">Resumen del año completo</div>
                         </a>
                         
-                        <div onclick="mostrarExportacion()" 
-                             class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-red-400 dark:hover:border-red-500">
+                        <div onclick="mostrarExportacion()" class="group block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:border-red-400 dark:hover:border-red-500">
                             <div class="w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                             </div>
                             <div class="text-lg font-bold text-gray-800 dark:text-white mb-1">Exportar PDF</div>
                             <div class="text-sm text-gray-500 dark:text-gray-400">Descargar informes</div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -49,7 +44,8 @@
                 <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-6">📈 Impacto Histórico del Simulador</h3>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {{-- Cambiamos a 3 columnas para acomodar 6 tarjetas --}}
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         
                         <div class="flex items-start p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600 transition-colors">
                             <div class="p-3 bg-blue-500 rounded-lg text-white shadow-sm">
@@ -58,7 +54,20 @@
                             <div class="ml-4">
                                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Sesiones Totales</p>
                                 <p class="text-2xl font-bold text-gray-800 dark:text-white" id="total-sesiones">-</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Desde el inicio</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Práctica e Instrucción</p>
+                            </div>
+                        </div>
+
+                        
+
+                        <div class="flex items-start p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600 transition-colors">
+                            <div class="p-3 bg-purple-500 rounded-lg text-white shadow-sm">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Horas Totales</p>
+                                <p class="text-2xl font-bold text-gray-800 dark:text-white" id="horas-totales">- h</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Acumuladas</p>
                             </div>
                         </div>
 
@@ -73,14 +82,31 @@
                             </div>
                         </div>
 
-                        <div class="flex items-start p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600 transition-colors">
-                            <div class="p-3 bg-purple-500 rounded-lg text-white shadow-sm">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <!-- NUEVA TARJETA: Sesiones de Instrucción -->
+                        <div class="flex items-start p-4 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-100 dark:border-orange-800/30 transition-colors">
+                            <div class="p-3 bg-orange-500 rounded-lg text-white shadow-sm">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Horas Totales</p>
-                                <p class="text-2xl font-bold text-gray-800 dark:text-white" id="horas-totales">- h</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Acumuladas</p>
+                                <p class="text-sm font-medium text-orange-600 dark:text-orange-400">Sesiones Instrucción</p>
+                                <p class="text-2xl font-bold text-gray-800 dark:text-white" id="total-instruccion">-</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Con instructor a bordo</p>
+                            </div>
+                        </div>
+
+                        
+
+                        
+
+                        <!-- NUEVA TARJETA: Horas Oficiales -->
+                        <div class="flex items-start p-4 bg-indigo-50 dark:bg-indigo-900/10 rounded-lg border border-indigo-100 dark:border-indigo-800/30 transition-colors">
+                            <div class="p-3 bg-indigo-500 rounded-lg text-white shadow-sm">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-indigo-600 dark:text-indigo-400">Horas Oficiales</p>
+                                <p class="text-2xl font-bold text-gray-800 dark:text-white" id="horas-instruccion">- h</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Horas certificadas</p>
                             </div>
                         </div>
 
@@ -99,6 +125,7 @@
                 </div>
             </div>
 
+            <!-- Modal de exportación sigue igual -->
             <div id="modal-exportacion" class="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-80 hidden z-50 transition-opacity">
                 <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center">
                     <div class="bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full border dark:border-gray-700">
@@ -177,13 +204,14 @@
             fetch('/reportes/resumen-rapido')
                 .then(response => response.json())
                 .then(data => {
-                    // Usamos EXACTAMENTE los nombres que manda tu función PHP original
                     document.getElementById('total-sesiones').textContent = data.total_historico_sesiones || 0;
                     document.getElementById('tiempo-promedio').textContent = (data.tiempo_promedio_global || 0) + ' min';
                     document.getElementById('horas-totales').textContent = (data.horas_totales_global || 0) + ' h';
-                    
-                    // Aquí pintamos directamente el ahorro que tu PHP ya calculó y formateó
                     document.getElementById('ahorro-total').textContent = '$ ' + (data.ahorro_total_global || 0);
+                    
+                    // Aquí cargamos las nuevas variables de instrucción al HTML
+                    document.getElementById('total-instruccion').textContent = data.total_sesiones_instruccion || 0;
+                    document.getElementById('horas-instruccion').textContent = (data.horas_instruccion_global || 0) + ' h';
                 })
                 .catch(error => {
                     console.error('Error:', error);

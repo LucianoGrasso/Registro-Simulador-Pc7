@@ -137,7 +137,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/admin/soporte/{soporte}', [SoporteController::class, 'destroy'])->name('soporte.destroy');
 
         // CRUD completo de instructores
-        Route::resource('instructores', InstructorController::class)->except(['create', 'show', 'edit', 'destroy']);
+        Route::resource('instructores', InstructorController::class)->except(['create', 'destroy']);
         Route::patch('/instructores/{instructor}/toggle-estado', [InstructorController::class, 'toggleEstado'])->name('instructores.toggle-estado');
     });
 });

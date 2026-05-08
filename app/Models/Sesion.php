@@ -28,6 +28,7 @@ class Sesion extends Model
         'archivo_vuelo',
         'es_instruccion',
         'instructor_npi',
+        'codigo_prueba',
     ];
 
     protected $casts = [
