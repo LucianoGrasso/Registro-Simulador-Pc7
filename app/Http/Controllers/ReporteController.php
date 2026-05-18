@@ -84,7 +84,7 @@ class ReporteController extends Controller
                           ->with(['alumno', 'usuarioInicio', 'usuarioFin'])
                           ->get();
 
-        // Estadísticas mensuales
+        // Estadísticas mensuales (AGREGAMOS LAS DE INSTRUCCIÓN)
         $stats = [
             'periodo' => $fechaInicio->locale('es')->isoFormat('MMMM [de] YYYY'),
             'mes' => $mes,
@@ -95,6 +95,10 @@ class ReporteController extends Controller
             'tiempo_total_horas' => round($sesiones->where('estado', 'finalizada')->sum('duracion_minutos') / 60, 2),
             'promedio_diario' => round($sesiones->count() / $fechaInicio->daysInMonth, 1),
             'tiempo_promedio' => round($sesiones->where('estado', 'finalizada')->avg('duracion_minutos'), 1),
+            
+            // --- NUEVOS DATOS OFICIALES ---
+            'sesiones_instruccion' => $sesiones->where('es_instruccion', true)->count(),
+            'horas_instruccion' => round($sesiones->where('estado', 'finalizada')->where('es_instruccion', true)->sum('duracion_minutos') / 60, 2),
         ];
 
         // Sesiones por día del mes
@@ -117,14 +121,27 @@ class ReporteController extends Controller
                                     ];
                                 })
                                 ->sortByDesc('total_sesiones')
-                                ->take(10);
+                                ->take(5); // Lo bajé a 5 para que cuadre mejor con el nuevo diseño
+
+        // --- NUEVO: TOP PRUEBAS SYLLABUS DEL MES ---
+        $topPruebas = $sesiones->where('es_instruccion', true)
+                               ->whereNotNull('codigo_prueba')
+                               ->groupBy('codigo_prueba')
+                               ->map(function($grupo) {
+                                   return [
+                                       'codigo' => $grupo->first()->codigo_prueba,
+                                       'cantidad' => $grupo->count()
+                                   ];
+                               })
+                               ->sortByDesc('cantidad')
+                               ->take(5);
 
         // Comparación con mes anterior
         $mesAnterior = $fechaInicio->copy()->subMonth();
         $sesionesAnterior = Sesion::whereBetween('fecha', [$mesAnterior, $mesAnterior->copy()->endOfMonth()])->count();
         $crecimiento = $sesionesAnterior > 0 ? round((($sesiones->count() - $sesionesAnterior) / $sesionesAnterior) * 100, 1) : 0;
 
-        return view('reportes.mensual', compact('stats', 'sesionesPorDia', 'topAlumnosMes', 'crecimiento'));
+        return view('reportes.mensual', compact('stats', 'sesionesPorDia', 'topAlumnosMes', 'crecimiento', 'topPruebas'));
     }
 
     /**
@@ -151,14 +168,18 @@ class ReporteController extends Controller
             'tiempo_total_horas' => round($sesiones->where('estado', 'finalizada')->sum('duracion_minutos') / 60, 2),
             'promedio_mensual' => round($sesiones->count() / 12, 1),
             'tiempo_promedio' => round($sesiones->where('estado', 'finalizada')->avg('duracion_minutos'), 1),
+            
+            // --- NUEVOS DATOS OFICIALES ---
+            'sesiones_instruccion' => $sesiones->where('es_instruccion', true)->count(),
+            'horas_instruccion' => round($sesiones->where('estado', 'finalizada')->where('es_instruccion', true)->sum('duracion_minutos') / 60, 2),
         ];
 
-        // Sesiones por mes
+        // Sesiones por mes (Usamos abreviaciones para que se vea mejor el gráfico)
         $sesionesPorMes = [];
         $meses = [
-            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
-            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            1 => 'Ene', 2 => 'Feb', 3 => 'Mar', 4 => 'Abr',
+            5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
+            9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dic'
         ];
 
         foreach ($meses as $numeroMes => $nombreMes) {
@@ -180,9 +201,22 @@ class ReporteController extends Controller
                                     ];
                                 })
                                 ->sortByDesc('total_sesiones')
-                                ->take(10);
+                                ->take(5);
 
-        return view('reportes.anual', compact('stats', 'sesionesPorMes', 'topAlumnosAño'));
+        // --- NUEVO: TOP PRUEBAS SYLLABUS DEL AÑO ---
+        $topPruebas = $sesiones->where('es_instruccion', true)
+                               ->whereNotNull('codigo_prueba')
+                               ->groupBy('codigo_prueba')
+                               ->map(function($grupo) {
+                                   return [
+                                       'codigo' => $grupo->first()->codigo_prueba,
+                                       'cantidad' => $grupo->count()
+                                   ];
+                               })
+                               ->sortByDesc('cantidad')
+                               ->take(5);
+
+        return view('reportes.anual', compact('stats', 'sesionesPorMes', 'topAlumnosAño', 'topPruebas'));
     }
 
     /**
@@ -213,8 +247,9 @@ class ReporteController extends Controller
      */
     private function exportarMensual($formato, $periodo)
     {
-        if (!$periodo) {
-            return response()->json(['error' => 'Periodo requerido para reporte mensual'], 400);
+        // Validación extra para evitar errores
+        if (empty($periodo) || !str_contains($periodo, '-')) {
+            return response()->json(['error' => 'Formato de periodo inválido o faltante'], 400);
         }
 
         [$año, $mes] = explode('-', $periodo);
@@ -227,6 +262,7 @@ class ReporteController extends Controller
                           ->with(['alumno', 'usuarioInicio', 'usuarioFin'])
                           ->get();
 
+        // AQUÍ ESTÁ LA CORRECCIÓN: Agregamos todas las variables que el PDF necesita
         $stats = [
             'periodo' => $fechaInicio->locale('es')->isoFormat('MMMM [de] YYYY'),
             'mes' => $mes,
@@ -235,7 +271,12 @@ class ReporteController extends Controller
             'sesiones_finalizadas' => $sesiones->where('estado', 'finalizada')->count(),
             'alumnos_activos' => $sesiones->unique('alumno_id')->count(),
             'tiempo_total_horas' => round($sesiones->where('estado', 'finalizada')->sum('duracion_minutos') / 60, 2),
+            'promedio_diario' => round($sesiones->count() / $fechaInicio->daysInMonth, 1),
             'tiempo_promedio' => round($sesiones->where('estado', 'finalizada')->avg('duracion_minutos'), 1),
+            
+            // Datos de vuelos oficiales
+            'sesiones_instruccion' => $sesiones->where('es_instruccion', true)->count(),
+            'horas_instruccion' => round($sesiones->where('estado', 'finalizada')->where('es_instruccion', true)->sum('duracion_minutos') / 60, 2),
         ];
 
         $nombreArchivo = "reporte_mensual_{$año}_{$mes}";
@@ -272,6 +313,9 @@ class ReporteController extends Controller
             'alumnos_activos' => $sesiones->unique('alumno_id')->count(),
             'tiempo_total_horas' => round($sesiones->where('estado', 'finalizada')->sum('duracion_minutos') / 60, 2),
             'tiempo_promedio' => round($sesiones->where('estado', 'finalizada')->avg('duracion_minutos'), 1),
+            // Nuevos datos
+            'sesiones_instruccion' => $sesiones->where('es_instruccion', true)->count(),
+            'horas_instruccion' => round($sesiones->where('estado', 'finalizada')->where('es_instruccion', true)->sum('duracion_minutos') / 60, 2),
         ];
 
         $nombreArchivo = "reporte_anual_{$año}";
@@ -344,156 +388,174 @@ class ReporteController extends Controller
     /**
      * Generar PDF para reporte mensual
      */
-    /**
-     * Generar PDF para reporte mensual
-     */
     private function generarPDFMensual($stats, $sesiones, $nombreArchivo)
     {
-        // --- 1. CÁLCULO DE AHORRO (Igual que en el anual) ---
-        $minutosTotales = $sesiones->where('estado', 'finalizada')->sum('duracion_minutos');
-        $horasReales = $minutosTotales / 60;
-        $ahorroTotal = $horasReales * 650; // Regla: 1 hora = 650 USD
+        // Cálculos
+        $ahorroTotal = floatval($stats['tiempo_total_horas']) * 650;
         $ahorroFormateado = number_format($ahorroTotal, 0, ',', '.');
 
-        // --- 2. PREPARACIÓN DE DATOS PARA GRÁFICO (Día por día) ---
+        // Top Pruebas Syllabus
+        $topPruebas = $sesiones->where('es_instruccion', true)
+                               ->whereNotNull('codigo_prueba')
+                               ->groupBy('codigo_prueba')
+                               ->map(function($grupo) {
+                                   return ['codigo' => $grupo->first()->codigo_prueba, 'cantidad' => $grupo->count()];
+                               })->sortByDesc('cantidad')->take(5);
+
+        // Gráfico
         $datosParaGrafico = [];
-        
-        // Creamos una fecha base para saber cuántos días tiene este mes específico
-        $fechaBase = Carbon::createFromDate($stats['año'], $stats['mes'], 1);
-        $diasEnMes = $fechaBase->daysInMonth;
-
-        // Iteramos del día 1 al último día del mes
+        $diasEnMes = Carbon::createFromDate($stats['año'], $stats['mes'], 1)->daysInMonth;
         for ($dia = 1; $dia <= $diasEnMes; $dia++) {
-            // Filtramos las sesiones de ese día específico
-            $cantidad = $sesiones->filter(function ($sesion) use ($dia) {
-                return $sesion->fecha->day == $dia;
-            })->count();
-
-            // La etiqueta será el número del día (ej: "1", "15", "30")
-            $datosParaGrafico[(string)$dia] = $cantidad;
+            $datosParaGrafico[(string)$dia] = $sesiones->filter(fn($s) => $s->fecha->day == $dia)->count();
         }
-
-        // Generamos el SVG Base64
         $svgGrafico = $this->generarGraficoSVG($datosParaGrafico);
 
-
-        // --- 3. CONSTRUCCIÓN DEL HTML ---
         $html = "
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset='UTF-8'>
-            <title>Reporte Mensual - {$stats['periodo']}</title>
+            <title>Reporte Mensual</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 20px; color: #333; font-size: 12px; }
-                .header { text-align: center; border-bottom: 3px solid #004080; padding-bottom: 20px; margin-bottom: 30px; }
-                .section-title { font-size: 16px; font-weight: bold; color: #333; border-bottom: 2px solid #004080; padding-bottom: 8px; margin-bottom: 15px; }
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 20px; color: #333; font-size: 12px; }
+                .header { text-align: center; border-bottom: 3px solid #003366; padding-bottom: 15px; margin-bottom: 25px; }
+                .header h1 { color: #003366; margin: 0 0 5px 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px;}
+                .header h2 { color: #666; margin: 0 0 5px 0; font-size: 14px; }
+                .header p { color: #999; margin: 0; font-size: 10px; }
                 
-                /* Cajas de Estadísticas (Estilo mejorado) */
-                .stats { display: flex; justify-content: space-around; margin: 20px 0; }
-                .stat-box { text-align: center; border: 1px solid #ddd; padding: 15px; border-radius: 5px; min-width: 120px; }
-                .stat-number { font-size: 24px; font-weight: bold; color: #004080; }
-                .stat-label { font-size: 11px; color: #666; margin-top: 5px; }
-
-                /* Contenedor del Gráfico */
-                .chart-container { 
-                    text-align: center; 
-                    margin: 20px 0; 
-                    padding: 10px;
-                }
-
-                /* Tabla de Detalle */
-                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
-                th { background-color: #f0f0f0; font-weight: bold; }
+                .section-title { color: #003366; font-size: 14px; font-weight: bold; border-bottom: 2px solid #003366; padding-bottom: 4px; margin-bottom: 15px; margin-top: 25px; text-transform: uppercase; }
                 
-                .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 15px; }
+                /* Layout de DOMPDF con Tablas */
+                .stats-table { width: 100%; border-collapse: separate; border-spacing: 8px; margin-bottom: 10px; margin-left: -8px;}
+                .stats-table td { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; text-align: center; width: 33.33%; }
+                .stat-value { font-size: 20px; font-weight: bold; color: #003366; margin-bottom: 4px; }
+                .stat-value.orange { color: #d97706; }
+                .stat-value.green { color: #16a34a; }
+                .stat-label { font-size: 10px; color: #6b7280; text-transform: uppercase; font-weight: bold; }
+
+                /* Tablas de Datos */
+                .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; }
+                .data-table th { background-color: #003366; color: white; padding: 8px; text-align: left; font-weight: bold; }
+                .data-table td { padding: 8px; border-bottom: 1px solid #e5e7eb; color: #374151; }
+                .data-table tr:nth-child(even) td { background-color: #f9fafb; }
+                
+                .badge { background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-family: monospace; font-size: 9px; font-weight: bold; }
+                .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 15px; }
             </style>
         </head>
         <body>
             <div class='header'>
-                <h1>Reporte Mensual del Simulador</h1>
-                <h2>{$stats['periodo']}</h2>
-                <p>Generado el " . now()->locale('es')->isoFormat('dddd, D [de] MMMM [de] YYYY [a las] HH:mm') . "</p>
+                <h1>Escuela de Aviación Naval</h1>
+                <h2>Reporte Mensual Simulador PC-7 - {$stats['periodo']}</h2>
+                <p>Documento Generado: " . now()->locale('es')->isoFormat('DD/MM/YYYY HH:mm') . " hrs</p>
             </div>
 
-            <div class='stats'>
-                <div class='stat-box'>
-                    <div class='stat-number'>{$stats['alumnos_activos']}</div>
-                    <div class='stat-label'>Alumnos Activos</div>
-                </div>
-                <div class='stat-box'>
-                    <div class='stat-number'>{$stats['total_sesiones']}</div>
-                    <div class='stat-label'>Total Sesiones</div>
-                </div>
-                <div class='stat-box'>
-                    <div class='stat-number'>{$stats['tiempo_total_horas']}h</div>
-                    <div class='stat-label'>Tiempo Total</div>
-                </div>
-                <div class='stat-box'>
-                    <div class='stat-number' style='color: #28a745;'>US$ {$ahorroFormateado}</div>
-                    <div class='stat-label'>Ahorro Operativo Est.</div>
-                </div>
+            <table class='stats-table'>
+                <tr>
+                    <td>
+                        <div class='stat-value'>{$stats['alumnos_activos']}</div>
+                        <div class='stat-label'>Alumnos Activos</div>
+                    </td>
+                    <td>
+                        <div class='stat-value'>{$stats['total_sesiones']}</div>
+                        <div class='stat-label'>Sesiones Totales</div>
+                    </td>
+                    <td>
+                        <div class='stat-value'>{$stats['tiempo_total_horas']}h</div>
+                        <div class='stat-label'>Horas Totales</div>
+                    </td>
+                </tr>
+            </table>
+
+            <table class='stats-table'>
+                <tr>
+                    <td>
+                        <div class='stat-value orange'>{$stats['sesiones_instruccion']}</div>
+                        <div class='stat-label'>Sesiones Oficiales</div>
+                    </td>
+                    <td>
+                        <div class='stat-value orange'>{$stats['horas_instruccion']}h</div>
+                        <div class='stat-label'>Horas de Instrucción</div>
+                    </td>
+                    <td>
+                        <div class='stat-value green'>US$ {$ahorroFormateado}</div>
+                        <div class='stat-label'>Ahorro Estimado</div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class='section-title'>Actividad Diaria del Mes</div>
+            <div style='text-align:center; margin-bottom: 20px;'>
+                <img src='{$svgGrafico}' style='width: 100%; max-height: 250px;' />
             </div>
 
-            <div class='section'>
-                <div class='section-title'>Actividad Diaria del Mes</div>
-                <div class='chart-container'>
-                    <img src='{$svgGrafico}' style='width: 100%; max-height: 300px;' />
-                </div>
-                <p style='text-align:center; font-size:10px; color:#666;'>* Gráfico de sesiones por día</p>
-            </div>
+            <table width='100%' style='margin-bottom: 20px;'>
+                <tr>
+                    <td width='50%' style='vertical-align: top; padding-right: 10px;'>
+                        <div class='section-title'>Top Pruebas Syllabus</div>
+                        <table class='data-table'>
+                            <tr><th>Código</th><th>Cantidad</th></tr>";
+                            if($topPruebas->count() > 0) {
+                                foreach ($topPruebas as $prueba) {
+                                    $html .= "<tr><td><span class='badge'>{$prueba['codigo']}</span></td><td>{$prueba['cantidad']} veces</td></tr>";
+                                }
+                            } else {
+                                $html .= "<tr><td colspan='2' style='text-align:center;'>Sin pruebas registradas</td></tr>";
+                            }
+            $html .= "  </table>
+                    </td>
+                    <td width='50%' style='vertical-align: top; padding-left: 10px;'>
+                        <div class='section-title'>Métricas de Rendimiento</div>
+                        <table class='data-table'>
+                            <tr><td>Promedio Diario</td><td><strong>{$stats['promedio_diario']} sesiones/día</strong></td></tr>
+                            <tr><td>Duración Promedio</td><td><strong>{$stats['tiempo_promedio']} min/sesión</strong></td></tr>
+                            <tr><td>Efectividad (Fin/Total)</td><td><strong>{$stats['sesiones_finalizadas']} de {$stats['total_sesiones']}</strong></td></tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
 
-            <br>
-            <br>
+            <div class='section-title'>Detalle de Vuelos del Mes</div>
+            <table class='data-table'>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Alumno</th>
+                        <th>NPI</th>
+                        <th>Prueba/Actividad</th>
+                        <th>Duración</th>
+                    </tr>
+                </thead>
+                <tbody>";
 
-            <div class='section'>
-                <div class='section-title'>Detalle de Sesiones</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Alumno</th>
-                            <th>NPI</th>
-                            <th>Hora Inicio</th>
-                            <th>Hora Fin</th>
-                            <th>Duración</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>";
-
-        foreach ($sesiones->sortBy('fecha') as $sesion) {
+        foreach ($sesiones->sortByDesc('fecha') as $sesion) {
             $duracion = $sesion->duracion_minutos ? $sesion->duracion_minutos . ' min' : '-';
-            $horaFin = $sesion->hora_fin ? $sesion->hora_fin->format('H:i') : '-';
+            $actividad = $sesion->actividad;
+            if ($sesion->codigo_prueba) {
+                $actividad = "<span class='badge'>" . $sesion->codigo_prueba . "</span> " . $actividad;
+            }
             
             $html .= "
-                        <tr>
-                            <td>" . $sesion->fecha->format('d/m/Y') . "</td>
-                            <td>" . $sesion->alumno->nombre_completo . "</td>
-                            <td>" . $sesion->alumno->npi . "</td>
-                            <td>" . $sesion->hora_inicio->format('H:i') . "</td>
-                            <td>{$horaFin}</td>
-                            <td>{$duracion}</td>
-                            <td>" . ucfirst($sesion->estado) . "</td>
-                        </tr>";
+                    <tr>
+                        <td style='white-space: nowrap;'>" . $sesion->fecha->format('d/m/Y') . "</td>
+                        <td>" . ($sesion->alumno->nombre_completo ?? 'N/A') . "</td>
+                        <td>" . ($sesion->alumno->npi ?? 'N/A') . "</td>
+                        <td>{$actividad}</td>
+                        <td>{$duracion}</td>
+                    </tr>";
         }
 
         $html .= "
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
 
             <div class='footer'>
-                <p>Armada de Chile - Escuela de Aviación Naval</p>
-                <p>Sistema de Gestión Simulador PC-7</p>
+                <p><strong>Armada de Chile - Escuela de Aviación Naval</strong><br>Sistema Automático de Gestión de Simulador PC-7</p>
             </div>
         </body>
         </html>";
         
-        $pdf = PDF::loadHTML($html)
-             ->setPaper('a4', 'portrait');
-
+        $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
         return $pdf->download($nombreArchivo . '.pdf');
     }
 
@@ -503,208 +565,144 @@ class ReporteController extends Controller
      */
     private function generarPDFAnual($stats, $sesiones, $nombreArchivo)
     {
-        // --- PREPARACIÓN DE DATOS ---
-        $sesionesPorMes = [];
-        // Array simple para el generador de gráficos: ['Ene' => 15, 'Feb' => 20...]
-        $datosParaGrafico = []; 
-
-        // ... dentro de generarPDFAnual ...
-
-        // 1. Calculamos los minutos totales de sesiones finalizadas
-        $minutosTotales = $sesiones->where('estado', 'finalizada')->sum('duracion_minutos');
-
-        // 2. Convertimos a horas (mantenemos los decimales para que el cálculo de dinero sea exacto)
-        $horasReales = $minutosTotales / 60;
-
-        // 3. Aplicamos la regla de negocio: 1 hora = 650 USD
-        $ahorroTotal = $horasReales * 650;
-
-        // 4. Formateamos el dinero para que se vea bonito (Ej: 12.500)
-        // Usamos '.' como separador de miles y ',' para decimales (formato chileno/europeo)
-        // El '0' indica que no queremos decimales en el dinero (números enteros)
+        $ahorroTotal = floatval($stats['tiempo_total_horas']) * 650;
         $ahorroFormateado = number_format($ahorroTotal, 0, ',', '.');
-        
-        $meses = [
-            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
-            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
-        ];
 
-        foreach ($meses as $numeroMes => $nombreMes) {
-            $sesionesMes = $sesiones->filter(function($sesion) use ($numeroMes) {
-                return $sesion->fecha->month == $numeroMes;
-            });
-            
-            $cantidad = $sesionesMes->count();
-            
-            // Llenamos datos para tabla
-            $sesionesPorMes[] = [
-                'mes' => $nombreMes,
-                'sesiones' => $cantidad,
-                'finalizadas' => $sesionesMes->where('estado', 'finalizada')->count(),
-                'tiempo_total' => round($sesionesMes->where('estado', 'finalizada')->sum('duracion_minutos') / 60, 1),
-                'alumnos' => $sesionesMes->unique('alumno_id')->count()
+        // Top Alumnos
+        $topAlumnos = $sesiones->groupBy('alumno_id')->map(function($g) {
+            return [
+                'nombre' => $g->first()->alumno->nombre_completo ?? 'N/A',
+                'npi' => $g->first()->alumno->npi ?? 'N/A',
+                'sesiones' => $g->count(),
+                'tiempo' => round($g->where('estado', 'finalizada')->sum('duracion_minutos') / 60, 1)
             ];
+        })->sortByDesc('sesiones')->take(5)->values();
 
-            // Llenamos datos para el gráfico
-            $datosParaGrafico[$nombreMes] = $cantidad;
+        // Top Pruebas
+        $topPruebas = $sesiones->where('es_instruccion', true)->whereNotNull('codigo_prueba')->groupBy('codigo_prueba')->map(function($g) {
+            return ['codigo' => $g->first()->codigo_prueba, 'cantidad' => $g->count()];
+        })->sortByDesc('cantidad')->take(5);
+
+        // Gráfico Mensual
+        $meses = [1=>'Ene', 2=>'Feb', 3=>'Mar', 4=>'Abr', 5=>'May', 6=>'Jun', 7=>'Jul', 8=>'Ago', 9=>'Sep', 10=>'Oct', 11=>'Nov', 12=>'Dic'];
+        $datosParaGrafico = [];
+        foreach ($meses as $num => $nom) {
+            $datosParaGrafico[$nom] = $sesiones->filter(fn($s) => $s->fecha->month == $num)->count();
         }
-
-        // --- GENERACIÓN DEL GRÁFICO OFFLINE ---
-        // Aquí ocurre la magia. Obtenemos el string SVG.
         $svgGrafico = $this->generarGraficoSVG($datosParaGrafico);
 
-        // Top 5 alumnos (Tu código original)
-        $topAlumnos = $sesiones->groupBy('alumno_id')
-            ->map(function($sesionesAlumno) {
-                return [
-                    'nombre' => $sesionesAlumno->first()->alumno->nombre_completo,
-                    'npi' => $sesionesAlumno->first()->alumno->npi,
-                    'sesiones' => $sesionesAlumno->count(),
-                    'tiempo' => round($sesionesAlumno->where('estado', 'finalizada')->sum('duracion_minutos') / 60, 1)
-                ];
-            })
-            ->sortByDesc('sesiones')
-            ->take(5)
-            ->values();
-
-        // --- CONSTRUCCIÓN DEL HTML ---
         $html = "
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset='UTF-8'>
-            <title>Reporte Anual - {$stats['año']}</title>
+            <title>Reporte Anual</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 20px; color: #333; font-size: 12px; }
-                .header { text-align: center; border-bottom: 3px solid #004080; padding-bottom: 20px; margin-bottom: 30px; }
-                .section-title { font-size: 16px; font-weight: bold; color: #333; border-bottom: 2px solid #004080; padding-bottom: 8px; margin-bottom: 15px; }
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 20px; color: #333; font-size: 12px; }
+                .header { text-align: center; border-bottom: 3px solid #003366; padding-bottom: 15px; margin-bottom: 25px; }
+                .header h1 { color: #003366; margin: 0 0 5px 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px;}
+                .header h2 { color: #666; margin: 0 0 5px 0; font-size: 14px; }
+                .header p { color: #999; margin: 0; font-size: 10px; }
                 
-                /* Estilos de tus cajas de estadísticas... */
-                .stats { display: flex; justify-content: space-around; margin: 20px 0; }
-                .stat-box { text-align: center; border: 1px solid #ddd; padding: 15px; border-radius: 5px; min-width: 120px; }
-                .stat-number { font-size: 24px; font-weight: bold; color: #004080; }
-                .stat-label { font-size: 11px; color: #666; margin-top: 5px; }
+                .section-title { color: #003366; font-size: 14px; font-weight: bold; border-bottom: 2px solid #003366; padding-bottom: 4px; margin-bottom: 15px; margin-top: 25px; text-transform: uppercase; }
+                
+                .stats-table { width: 100%; border-collapse: separate; border-spacing: 8px; margin-bottom: 10px; margin-left: -8px;}
+                .stats-table td { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 12px; text-align: center; width: 33.33%; }
+                .stat-value { font-size: 20px; font-weight: bold; color: #003366; margin-bottom: 4px; }
+                .stat-value.orange { color: #d97706; }
+                .stat-value.green { color: #16a34a; }
+                .stat-label { font-size: 10px; color: #6b7280; text-transform: uppercase; font-weight: bold; }
 
-                /* Contenedor del Gráfico */
-                .chart-container { 
-                    text-align: center; 
-                    margin: 20px 0; 
-                    padding: 10px;
-                }
+                .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; }
+                .data-table th { background-color: #003366; color: white; padding: 8px; text-align: left; font-weight: bold; }
+                .data-table td { padding: 8px; border-bottom: 1px solid #e5e7eb; color: #374151; }
+                .data-table tr:nth-child(even) td { background-color: #f9fafb; }
                 
-                /* Tablas y grids... */
-                .monthly-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
-                .month-card { border: 1px solid #ddd; padding: 10px; border-radius: 5px; background: #f9f9f9; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
-                th { background-color: #f0f0f0; font-weight: bold; }
-                .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ddd; padding-top: 15px; }
+                .badge { background: #e0e7ff; color: #3730a3; padding: 3px 6px; border-radius: 4px; font-family: monospace; font-size: 9px; font-weight: bold; }
+                .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 15px; }
             </style>
         </head>
         <body>
             <div class='header'>
-                <h1>Reporte Anual del Simulador PC-7</h1>
-                <h2>Año {$stats['año']}</h2>
-                <p>Generado el " . now()->locale('es')->isoFormat('D [de] MMMM [de] YYYY HH:mm') . "</p>
+                <h1>Escuela de Aviación Naval</h1>
+                <h2>Reporte Anual Simulador PC-7 - Año {$stats['año']}</h2>
+                <p>Documento Generado: " . now()->locale('es')->isoFormat('DD/MM/YYYY HH:mm') . " hrs</p>
             </div>
 
-            <div class='stats'>
-                <div class='stat-box'>
-                    <div class='stat-number'>{$stats['alumnos_activos']}</div>
-                    <div class='stat-label'>Alumnos</div>
-                </div>
-                <div class='stat-box'>
-                    <div class='stat-number'>{$stats['total_sesiones']}</div>
-                    <div class='stat-label'>Total Sesiones</div>
-                </div>
-                <div class='stat-box'>
-                    <div class='stat-number'>{$stats['tiempo_total_horas']}h</div>
-                    <div class='stat-label'>Tiempo Total</div>
-                </div>
-                <div class='stat-box'>
-                    <div class='stat-number' style='color: #28a745;'>US$ {$ahorroFormateado}</div>
-                    <div class='stat-label'>Ahorro Operativo Est.</div>
-                </div>
+            <table class='stats-table'>
+                <tr>
+                    <td>
+                        <div class='stat-value'>{$stats['alumnos_activos']}</div>
+                        <div class='stat-label'>Alumnos Totales</div>
+                    </td>
+                    <td>
+                        <div class='stat-value'>{$stats['total_sesiones']}</div>
+                        <div class='stat-label'>Sesiones Anuales</div>
+                    </td>
+                    <td>
+                        <div class='stat-value'>{$stats['tiempo_total_horas']}h</div>
+                        <div class='stat-label'>Horas de Vuelo</div>
+                    </td>
+                </tr>
+            </table>
+
+            <table class='stats-table'>
+                <tr>
+                    <td>
+                        <div class='stat-value orange'>{$stats['sesiones_instruccion']}</div>
+                        <div class='stat-label'>Sesiones Oficiales</div>
+                    </td>
+                    <td>
+                        <div class='stat-value orange'>{$stats['horas_instruccion']}h</div>
+                        <div class='stat-label'>Horas de Instrucción</div>
+                    </td>
+                    <td>
+                        <div class='stat-value green'>US$ {$ahorroFormateado}</div>
+                        <div class='stat-label'>Ahorro Anual Estimado</div>
+                    </td>
+                </tr>
+            </table>
+
+            <div class='section-title'>Curva de Actividad Mensual</div>
+            <div style='text-align:center; margin-bottom: 20px;'>
+                <img src='{$svgGrafico}' style='width: 100%; max-height: 250px;' />
             </div>
 
-            <div class='section'>
-                <div class='section-title'>Actividad Mensual</div>
-                <div class='chart-container'>
-                    <img src='{$svgGrafico}' style='width: 100%; max-height: 300px;' />
-                </div>
-                <p style='text-align:center; font-size:10px; color:#666;'>* Gráfico generado localmente</p>
-            </div>
-
-            <br>
-            <br>
-
-            <div class='section'>
-                <div class='section-title'>Detalle Mensual</div>
-                <div class='monthly-grid'>";
-                
-                // Nota: Tu estilo CSS de grid puede no funcionar perfecto en versiones viejas de DOMPDF.
-                // Si ves que se desordena, usa una tabla clásica HTML.
-                // Aquí dejo una versión simplificada usando tabla flotante inline para compatibilidad
-                $html .= "<table style='border:none;'><tr>";
-                $counter = 0;
-                foreach ($sesionesPorMes as $mes) {
-                    if($counter > 0 && $counter % 3 == 0) $html .= "</tr><tr>";
-                    $html .= "
-                        <td style='border:none; padding:5px; width:33%;'>
-                            <div class='month-card'>
-                                <div style='color:#004080; font-weight:bold;'>{$mes['mes']}</div>
-                                <div>Sesiones: {$mes['sesiones']}</div>
-                                <div>Horas: {$mes['tiempo_total']}</div>
-                            </div>
-                        </td>";
-                    $counter++;
-                }
-                $html .= "</tr></table>";
-
-        $html .= "
-                </div>
-            </div>
-
-            <div class='section'>
-                <div class='section-title'>Top 5 Alumnos</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Pos</th>
-                            <th>Alumno</th>
-                            <th>NPI</th>
-                            <th>Sesiones</th>
-                            <th>Horas</th>
-                        </tr>
-                    </thead>
-                    <tbody>";
-
-        foreach ($topAlumnos as $index => $alumno) {
-            $html .= "<tr>
-                        <td style='text-align:center;'>".($index+1)."</td>
-                        <td>{$alumno['nombre']}</td>
-                        <td>{$alumno['npi']}</td>
-                        <td style='text-align:center;'>{$alumno['sesiones']}</td>
-                        <td style='text-align:center;'>{$alumno['tiempo']}</td>
-                      </tr>";
-        }
-
-        $html .= "
-                    </tbody>
-                </table>
-            </div>
+            <table width='100%' style='margin-bottom: 20px;'>
+                <tr>
+                    <td width='50%' style='vertical-align: top; padding-right: 10px;'>
+                        <div class='section-title'>Top 5 Alumnos del Año</div>
+                        <table class='data-table'>
+                            <tr><th>Pos</th><th>Alumno / NPI</th><th>Horas</th></tr>";
+                            foreach ($topAlumnos as $index => $alumno) {
+                                $pos = $index + 1;
+                                $html .= "<tr><td>{$pos}</td><td><strong>{$alumno['nombre']}</strong><br><span style='color:#666;font-size:9px;'>NPI: {$alumno['npi']}</span></td><td>{$alumno['tiempo']}h</td></tr>";
+                            }
+            $html .= "  </table>
+                    </td>
+                    <td width='50%' style='vertical-align: top; padding-left: 10px;'>
+                        <div class='section-title'>Top Pruebas Syllabus</div>
+                        <table class='data-table'>
+                            <tr><th>Código</th><th>Ejecuciones</th></tr>";
+                            if($topPruebas->count() > 0) {
+                                foreach ($topPruebas as $prueba) {
+                                    $html .= "<tr><td><span class='badge'>{$prueba['codigo']}</span></td><td>{$prueba['cantidad']} veces</td></tr>";
+                                }
+                            } else {
+                                $html .= "<tr><td colspan='2' style='text-align:center;'>Sin pruebas registradas</td></tr>";
+                            }
+            $html .= "  </table>
+                    </td>
+                </tr>
+            </table>
 
             <div class='footer'>
-                <p>Armada de Chile - Escuela de Aviación Naval</p>
-                <p>Sistema de Gestión Simulador PC-7</p>
+                <p><strong>Armada de Chile - Escuela de Aviación Naval</strong><br>Sistema Automático de Gestión de Simulador PC-7</p>
             </div>
         </body>
         </html>";
-
-        $pdf = PDF::loadHTML($html)
-            ->setPaper('a4', 'portrait'); // Ya no necesitas 'isRemoteEnabled'
         
+        $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
         return $pdf->download($nombreArchivo . '.pdf');
     }
 
