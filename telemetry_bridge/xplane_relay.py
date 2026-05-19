@@ -1,5 +1,4 @@
 import socket
-import struct
 import requests
 import time
 import threading
@@ -72,7 +71,7 @@ threading.Thread(target=laravel_sender, daemon=True).start()
 try:
     while running:
         
-        # --- LA PIEZA FALTANTE: Revisar el archivo STOP de Laravel ---
+        # --- Revisar el archivo STOP de Laravel ---
         if os.path.exists(archivo_stop):
             running = False
             try:
@@ -80,45 +79,40 @@ try:
             except Exception:
                 pass
             break # Salimos del bucle para ir a guardar
-        # -------------------------------------------------------------
 
         ready = select.select([sock], [], [], 0.1)
         
         if ready[0]:
             try:
                 data, addr = sock.recvfrom(2048)
-                header = data[0:4]
+                msg = data.decode('utf-8').strip()
                 
-                if header == b'DATA':
-                    for i in range(5, len(data), 36):
-                        if i + 36 > len(data): break
-                        bloque_id = struct.unpack('<i', data[i:i+4])[0]
-                        valores = struct.unpack('<8f', data[i+4:i+36])
-
-                        if bloque_id == 17:
-                            state["pitch"], state["roll"] = round(valores[0], 2), round(valores[1], 2)
-                            state["hdg"] = round(valores[3], 1)
-                        elif bloque_id == 98: state["nav1_obs"] = round(valores[0], 1)
-                        elif bloque_id == 3: state["spd"] = round(valores[0], 1)
-                        elif bloque_id == 20: 
-                            state["alt"] = round(valores[2], 1)
-                            state["lat"] = round(valores[0], 6) 
-                            state["lon"] = round(valores[1], 6) 
-                        elif bloque_id == 97: state["nav1_freq"] = round(valores[0] / 100, 2)
-                        elif bloque_id == 96: state["com1_freq"] = round(valores[0] / 100, 2)
-                else:
-                    try:
-                        msg = data.decode('utf-8').strip()
-                        if "BRNG:" in msg: state["nav1_bearing"] = float(msg.split(":")[1])
-                        elif "CDI:" in msg: state["nav1_cdi"] = float(msg.split(":")[1])
-                        elif "OBS:" in msg: state["nav1_obs"] = float(msg.split(":")[1])
-                    except: pass
+                # --- NUEVA LÓGICA DE PARSEO EXCLUSIVA PARA FLYWITHLUA ---
+                if msg.startswith("TLM:"):
+                    # El mensaje viene así: TLM:spd|pitch|roll|hdg|alt|lat|lon|obs|cdi|brng|nav_f|com_f
+                    valores = msg.split(":")[1].split("|")
+                    
+                    if len(valores) == 12:
+                        state["spd"] = float(valores[0])
+                        state["pitch"] = float(valores[1])
+                        state["roll"] = float(valores[2])
+                        state["hdg"] = float(valores[3])
+                        state["alt"] = float(valores[4])
+                        state["lat"] = float(valores[5])
+                        state["lon"] = float(valores[6])
+                        state["nav1_obs"] = float(valores[7])
+                        state["nav1_cdi"] = float(valores[8])
+                        state["nav1_bearing"] = float(valores[9])
+                        state["nav1_freq"] = float(valores[10])
+                        state["com1_freq"] = float(valores[11])
+                        
             except BlockingIOError:
+                pass
+            except Exception:
+                # Ignorar paquetes corruptos si ocurre algún error de decodificación
                 pass
 finally:
     # --- GUARDADO DEFINITIVO DEL VUELO ---
-    # Esto se ejecutará siempre, ya sea que Laravel ponga el archivo .txt
-    # o que cierres la consola a la fuerza.
     if len(ruta_vuelo) > 0:
         nombre_archivo = f"vuelo_sesion_{SESSION_ID}.json"
         ruta_completa = os.path.join(dir_vuelos, nombre_archivo)
