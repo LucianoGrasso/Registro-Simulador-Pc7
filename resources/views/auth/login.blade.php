@@ -4,7 +4,9 @@
 
     <!-- Título -->
     <div class="mb-6 text-center">
-        <h2 class="text-2xl font-bold text-gray-800">Iniciar Sesión</h2>
+        <h2 id="llave-secreta" class="text-2xl font-bold text-center select-none cursor-default">
+            Iniciar Sesión
+        </h2>
         <p class="text-sm text-gray-600 mt-1">Sistema de Registro Simulador PC-7</p>
     </div>
 
@@ -50,4 +52,31 @@
             </x-primary-button>
         </div>
     </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Buscamos nuestro "botón" secreto y los campos del formulario
+            const llaveSecreta = document.getElementById('llave-secreta');
+            const emailInput = document.getElementById('email');
+            const passInput = document.getElementById('password'); // Aquí está la variable
+
+            if (llaveSecreta && emailInput && passInput) {
+                // Cuando hagan doble clic, llenamos los datos
+                llaveSecreta.addEventListener('dblclick', function() {
+                    emailInput.value = 'instructor@simulador.local';
+                    passInput.value = 'instructor123'; // ¡Ahora sí usamos el nombre correcto!
+                    
+                    // Efecto visual: parpadear el fondo en verde claro
+                    emailInput.style.backgroundColor = '#dcfce3';
+                    passInput.style.backgroundColor = '#dcfce3';
+                    
+                    // Quitar el verde después de 300ms
+                    setTimeout(() => {
+                        emailInput.style.backgroundColor = '';
+                        passInput.style.backgroundColor = '';
+                    }, 300);
+                });
+            }
+        });
+    </script>
 </x-guest-layout>

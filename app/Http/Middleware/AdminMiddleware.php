@@ -21,9 +21,11 @@ class AdminMiddleware
             return redirect()->route('login')->with('error', 'Debes iniciar sesión');
         }
 
-        // Verificar que sea admin
-        if (!Auth::user()->isAdmin()) {
-            return redirect()->route('dashboard')
+        // Verificar que sea admin o instructor. Si no es ninguno de los dos, lo bloqueamos.
+        if (!Auth::user()->isAdmin() && Auth::user()->role !== 'instructor') {
+            
+            // Lo redirigimos al scanner porque es la única vista válida para un operador
+            return redirect()->route('sesiones.scanner')
                            ->with('error', 'No tienes permisos para acceder a esta sección');
         }
 
