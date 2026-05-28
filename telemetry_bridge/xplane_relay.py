@@ -51,7 +51,7 @@ def laravel_sender():
         time.sleep(0.04) 
         current_state = state.copy()
         
-        # 1. Enviar a Laravel
+        # 1. Enviar a Laravel (Para que el IDU siga en vivo)
         try:
             requests.post(LARAVEL_URL, json=current_state, timeout=0.04)
         except Exception:
@@ -60,10 +60,19 @@ def laravel_sender():
         # 2. Guardar en memoria para el JSON
         curr_time = time.time()
         if curr_time - ultimo_guardado >= 0.2:
-            punto = current_state.copy()
-            punto["ts"] = int(curr_time * 1000)
-            ruta_vuelo.append(punto)
-            ultimo_guardado = curr_time
+            lat_actual = current_state["lat"]
+            lon_actual = current_state["lon"]
+            
+            # --- FILTRO ANTI-BASURA ---
+            # Evita coordenadas 0.0 (Null Island / Pantalla de carga)
+            if lat_actual != 0.0 and lon_actual != 0.0:
+                # Evita coordenadas imposibles (ej. -999 cuando X-Plane crashea)
+                if -90 <= lat_actual <= 90 and -180 <= lon_actual <= 180:
+                    
+                    punto = current_state.copy()
+                    punto["ts"] = int(curr_time * 1000)
+                    ruta_vuelo.append(punto)
+                    ultimo_guardado = curr_time
 
 threading.Thread(target=laravel_sender, daemon=True).start()
 
@@ -87,7 +96,7 @@ try:
                 data, addr = sock.recvfrom(2048)
                 msg = data.decode('utf-8').strip()
                 
-                # --- NUEVA LÓGICA DE PARSEO EXCLUSIVA PARA FLYWITHLUA ---
+                # --- LÓGICA DE PARSEO EXCLUSIVA PARA FLYWITHLUA ---
                 if msg.startswith("TLM:"):
                     # El mensaje viene así: TLM:spd|pitch|roll|hdg|alt|lat|lon|obs|cdi|brng|nav_f|com_f
                     valores = msg.split(":")[1].split("|")
